@@ -93,10 +93,10 @@ type WalletResponse struct {
 }
 
 type TransferRequest struct {
-	From           uuid.UUID `json:"from"`
-	To             uuid.UUID `json:"to"`
-	Amount         int64     `json:"amount"`
-	IdempotencyKey string    `json:"idempotency_key"`
+	From           string `json:"from,omitempty"`
+	To             string `json:"to"`
+	Amount         int64  `json:"amount"`
+	IdempotencyKey string `json:"idempotency_key"`
 }
 
 type TransferResponse struct {

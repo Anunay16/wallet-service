@@ -67,7 +67,7 @@ ALICE_BAL_INIT=$(curl -s "$BASE_URL/wallets/$ALICE_WALLET" \
   -H "Authorization: Bearer $ALICE_TOKEN" | jq .balance)
 echo "Alice Initial Balance: $ALICE_BAL_INIT paise (= ₹$(($ALICE_BAL_INIT / 100)))"
 
-# 7. Execute Peer-to-Peer Transfer (using User IDs)
+# 7. Execute Peer-to-Peer Transfer (using Usernames)
 IDEM_KEY="txn-${TIMESTAMP}"
 TRANSFER_AMOUNT=50000
 
@@ -76,8 +76,8 @@ TRANSFER_RESP=$(curl -s -X POST "$BASE_URL/transfers" \
   -H "Authorization: Bearer $ALICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"from\": \"$ALICE_USER_ID\",
-    \"to\": \"$BOB_USER_ID\",
+    \"from\": \"$ALICE_USER\",
+    \"to\": \"$BOB_USER\",
     \"amount\": $TRANSFER_AMOUNT,
     \"idempotency_key\": \"$IDEM_KEY\"
   }")
@@ -91,8 +91,8 @@ REPLAY_RESP=$(curl -s -X POST "$BASE_URL/transfers" \
   -H "Authorization: Bearer $ALICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"from\": \"$ALICE_USER_ID\",
-    \"to\": \"$BOB_USER_ID\",
+    \"from\": \"$ALICE_USER\",
+    \"to\": \"$BOB_USER\",
     \"amount\": $TRANSFER_AMOUNT,
     \"idempotency_key\": \"$IDEM_KEY\"
   }")

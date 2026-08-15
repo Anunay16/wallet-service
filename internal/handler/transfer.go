@@ -40,8 +40,8 @@ func (h *TransferHandler) InitiateTransfer(c *fiber.Ctx) error {
 		if errors.Is(err, domain.ErrInvalidAmount) || errors.Is(err, domain.ErrSameWalletTransfer) || errors.Is(err, domain.ErrEmptyIdempotencyKey) {
 			return c.Status(fiber.StatusUnprocessableEntity).JSON(fiber.Map{"error": err.Error()})
 		}
-		if errors.Is(err, domain.ErrWalletNotFound) {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "wallet not found"})
+		if errors.Is(err, domain.ErrWalletNotFound) || errors.Is(err, domain.ErrUserNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "recipient or sender user/wallet not found"})
 		}
 		if errors.Is(err, domain.ErrForbiddenWalletAccess) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})

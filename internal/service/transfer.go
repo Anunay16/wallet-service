@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -13,7 +14,12 @@ import (
 
 type transferRepo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Transfer, error)
-	ExecuteAtomicTransfer(ctx context.Context, req domain.TransferRequest, userID uuid.UUID, reqHash string) (*domain.Transfer, *domain.IdempotencyRecord, error)
+	ExecuteAtomicTransfer(ctx context.Context, req domain.TransferRequest, fromUserID, toUserID, userID uuid.UUID, reqHash string) (*domain.Transfer, *domain.IdempotencyRecord, error)
+}
+
+type transferUserRepo interface {
+	GetUserByUsername(ctx context.Context, username string) (*domain.User, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 }
 
 type transferWalletRepo interface {
@@ -27,17 +33,20 @@ type idempotencyRepo interface {
 
 type TransferService struct {
 	transferRepo    transferRepo
+	userRepo        transferUserRepo
 	walletRepo      transferWalletRepo
 	idempotencyRepo idempotencyRepo
 }
 
 func NewTransferService(
 	transferRepo transferRepo,
+	userRepo transferUserRepo,
 	walletRepo transferWalletRepo,
 	idempotencyRepo idempotencyRepo,
 ) *TransferService {
 	return &TransferService{
 		transferRepo:    transferRepo,
+		userRepo:        userRepo,
 		walletRepo:      walletRepo,
 		idempotencyRepo: idempotencyRepo,
 	}
@@ -48,10 +57,18 @@ func (s *TransferService) InitiateTransfer(
 	req domain.TransferRequest,
 	callerUserID uuid.UUID,
 ) (*domain.IdempotencyRecord, error) {
+	req.From = strings.TrimSpace(req.From)
+	req.To = strings.TrimSpace(req.To)
 	req.IdempotencyKey = strings.TrimSpace(req.IdempotencyKey)
 
-	if req.From == uuid.Nil {
-		req.From = callerUserID
+	// Fetch caller user to get their username
+	callerUser, err := s.userRepo.GetUserByID(ctx, callerUserID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch caller user: %w", err)
+	}
+
+	if req.From == "" {
+		req.From = callerUser.Username
 	}
 
 	if req.Amount <= 0 {
@@ -65,11 +82,20 @@ func (s *TransferService) InitiateTransfer(
 	}
 
 	// Ensure caller is initiating their own transfer
-	if req.From != callerUserID {
+	if req.From != callerUser.Username {
 		return nil, domain.ErrForbiddenWalletAccess
 	}
 
-	// Canonical request hash
+	// Resolve destination user by username
+	toUser, err := s.userRepo.GetUserByUsername(ctx, req.To)
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return nil, domain.ErrWalletNotFound
+		}
+		return nil, fmt.Errorf("failed to lookup destination user: %w", err)
+	}
+
+	// Canonical request hash using lowercased usernames
 	reqHash := computeRequestHash(req.From, req.To, req.Amount)
 
 	// Idempotency lookup
@@ -87,7 +113,7 @@ func (s *TransferService) InitiateTransfer(
 	}
 
 	// Execute atomic transfer (locks rows in ascending order, updates balances, saves transfer + idempotency)
-	_, idemRecord, err := s.transferRepo.ExecuteAtomicTransfer(ctx, req, callerUserID, reqHash)
+	_, idemRecord, err := s.transferRepo.ExecuteAtomicTransfer(ctx, req, callerUser.ID, toUser.ID, callerUserID, reqHash)
 	if err != nil && idemRecord == nil {
 		return nil, err
 	}
@@ -123,8 +149,8 @@ func (s *TransferService) GetTransferByID(
 	return nil, domain.ErrForbiddenWalletAccess
 }
 
-func computeRequestHash(from, to uuid.UUID, amount int64) string {
-	raw := fmt.Sprintf("%s:%s:%d", from.String(), to.String(), amount)
+func computeRequestHash(from, to string, amount int64) string {
+	raw := fmt.Sprintf("%s:%s:%d", strings.ToLower(from), strings.ToLower(to), amount)
 	hash := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(hash[:])
 }

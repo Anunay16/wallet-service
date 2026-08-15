@@ -173,8 +173,8 @@ Alice initiates a transfer of 50,000 paise (₹500.00) to Bob.
 * **Body**:
 ```json
 {
-  "from": "<ALICE_WALLET_UUID>",
-  "to": "<BOB_WALLET_UUID>",
+  "from": "alice",
+  "to": "bob",
   "amount": 50000,
   "idempotency_key": "txn-happy-001"
 }
@@ -206,8 +206,8 @@ Re-send the exact same transfer request with the identical `idempotency_key` (`t
 * **Body**:
 ```json
 {
-  "from": "<ALICE_WALLET_UUID>",
-  "to": "<BOB_WALLET_UUID>",
+  "from": "alice",
+  "to": "bob",
   "amount": 50000,
   "idempotency_key": "txn-happy-001"
 }

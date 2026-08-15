@@ -28,7 +28,7 @@ func InitializeServer(gormDB *gorm.DB, cfg *config.Config, log *zap.Logger) *Ser
 	// 2. Instantiate Services
 	authSvc := service.NewAuthService(userRepo, cfg.Auth)
 	walletSvc := service.NewWalletService(walletRepo)
-	transferSvc := service.NewTransferService(transferRepo, walletRepo, idempotencyRepo)
+	transferSvc := service.NewTransferService(transferRepo, userRepo, walletRepo, idempotencyRepo)
 
 	// 3. Instantiate Handlers
 	healthHdlr := handler.NewHealthHandler(gormDB)

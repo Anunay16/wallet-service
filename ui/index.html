@@ -338,10 +338,6 @@
         <button id="get-wallet-btn" class="btn">Get or Create My Wallet</button>
 
         <div id="wallet-info" style="display: none; margin-top: 1.5rem;">
-          <div class="form-group">
-            <label>Your User ID (Share this ID to receive transfers)</label>
-            <input type="text" id="user-id-display" class="form-control" readonly style="font-family: 'JetBrains Mono', monospace;">
-          </div>
           <div class="balance-display">
             <div style="font-size: 0.85rem; text-transform: uppercase; color: #a5b4fc; letter-spacing: 0.05em;">Current Balance</div>
             <div class="balance-amount" id="balance-rupees">₹0.00</div>
@@ -358,8 +354,8 @@
         <h2>Initiate Peer-to-Peer Transfer</h2>
         <form id="transfer-form">
           <div class="form-group">
-            <label>To User ID (Recipient)</label>
-            <input type="text" id="transfer-to" class="form-control" placeholder="Recipient User UUID" required style="font-family: 'JetBrains Mono', monospace;">
+            <label>To Username (Recipient)</label>
+            <input type="text" id="transfer-to" class="form-control" placeholder="Recipient Username (e.g. bob)" required style="font-family: 'JetBrains Mono', monospace;">
           </div>
           <div class="form-group">
             <label>Amount (in paise)</label>
@@ -504,8 +500,7 @@
         const data = await res.json();
         output.textContent = `HTTP ${res.status}\n` + JSON.stringify(data, null, 2);
 
-        if (res.ok && data.user_id) {
-          document.getElementById('user-id-display').value = data.user_id;
+        if (res.ok) {
           document.getElementById('balance-rupees').textContent = `₹${(data.balance / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
           document.getElementById('balance-paise').textContent = `(${data.balance.toLocaleString()} paise)`;
           document.getElementById('wallet-info').style.display = 'block';
@@ -536,7 +531,7 @@
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            to: document.getElementById('transfer-to').value,
+            to: document.getElementById('transfer-to').value.trim(),
             amount: parseInt(document.getElementById('transfer-amount').value, 10),
             idempotency_key: idempotencyKey,
           })

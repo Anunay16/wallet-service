@@ -280,8 +280,8 @@ Prefix: `WALLET_`, separator: `_` replacing `.`
 ```json
 // Request
 {
-  "from": "wallet-uuid",
-  "to":   "wallet-uuid",
+  "from": "alice",
+  "to":   "bob",
   "amount": 50000,
   "idempotency_key": "client-generated-unique-key"
 }

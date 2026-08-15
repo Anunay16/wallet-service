@@ -36,6 +36,7 @@ func (r *TransferRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain
 func (r *TransferRepository) ExecuteAtomicTransfer(
 	ctx context.Context,
 	req domain.TransferRequest,
+	fromUserID, toUserID uuid.UUID,
 	userID uuid.UUID,
 	reqHash string,
 ) (*domain.Transfer, *domain.IdempotencyRecord, error) {
@@ -45,7 +46,7 @@ func (r *TransferRepository) ExecuteAtomicTransfer(
 
 	txErr := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Deadlock prevention: sort lock targets in ascending UUID string order
-		firstUserID, secondUserID := req.From, req.To
+		firstUserID, secondUserID := fromUserID, toUserID
 		if strings.Compare(firstUserID.String(), secondUserID.String()) > 0 {
 			firstUserID, secondUserID = secondUserID, firstUserID
 		}
@@ -64,8 +65,8 @@ func (r *TransferRepository) ExecuteAtomicTransfer(
 			wallets[w.UserID] = w
 		}
 
-		fromWallet, fromExists := wallets[req.From]
-		toWallet, toExists := wallets[req.To]
+		fromWallet, fromExists := wallets[fromUserID]
+		toWallet, toExists := wallets[toUserID]
 		if !fromExists || !toExists {
 			return domain.ErrWalletNotFound
 		}
