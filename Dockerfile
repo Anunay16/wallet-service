@@ -23,7 +23,7 @@ WORKDIR /app
 
 COPY --from=builder /app/wallet-server .
 COPY --from=builder /app/config.yaml   .
-COPY --from=builder /app/web/          ./web/
+COPY --from=builder /app/ui/          ./ui/
 
 RUN chown -R wallet:wallet /app
 

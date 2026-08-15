@@ -365,18 +365,9 @@
             <label>To Wallet ID (Recipient)</label>
             <input type="text" id="transfer-to" class="form-control" placeholder="Recipient wallet UUID" required style="font-family: 'JetBrains Mono', monospace;">
           </div>
-          <div class="grid-2">
-            <div class="form-group">
-              <label>Amount (in paise)</label>
-              <input type="number" id="transfer-amount" class="form-control" placeholder="50000 (= ₹500)" min="1" required>
-            </div>
-            <div class="form-group">
-              <label>Idempotency Key</label>
-              <div style="display: flex; gap: 0.5rem;">
-                <input type="text" id="transfer-idem-key" class="form-control" placeholder="txn-unique-id" required style="font-family: 'JetBrains Mono', monospace;">
-                <button type="button" id="gen-idem-btn" class="btn btn-secondary" style="white-space: nowrap;">Gen Key</button>
-              </div>
-            </div>
+          <div class="form-group">
+            <label>Amount (in paise)</label>
+            <input type="number" id="transfer-amount" class="form-control" placeholder="50000 (= ₹500)" min="1" required>
           </div>
           <button type="submit" class="btn" style="width: 100%;">Execute Transfer</button>
         </form>
@@ -424,6 +415,14 @@
     }
     updateSessionUI();
 
+    // Helper to generate a client-side UUID v4 idempotency key
+    function generateIdempotencyKey() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      return 'idem-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10);
+    }
+
     logoutBtn.addEventListener('click', () => {
       token = '';
       localStorage.removeItem('wallet_token');
@@ -439,11 +438,6 @@
         btn.classList.add('active');
         document.getElementById(btn.dataset.tab).classList.add('active');
       });
-    });
-
-    // Generate Idempotency Key
-    document.getElementById('gen-idem-btn').addEventListener('click', () => {
-      document.getElementById('transfer-idem-key').value = 'txn-' + Math.random().toString(36).substring(2, 10);
     });
 
     // Register Form
@@ -536,6 +530,9 @@
         return;
       }
 
+      // Generate unique idempotency key transparently for each transfer submission
+      const idempotencyKey = generateIdempotencyKey();
+
       output.textContent = 'Executing transfer...';
       try {
         const res = await fetch('/transfers', {
@@ -548,7 +545,7 @@
             from: document.getElementById('transfer-from').value,
             to: document.getElementById('transfer-to').value,
             amount: parseInt(document.getElementById('transfer-amount').value, 10),
-            idempotency_key: document.getElementById('transfer-idem-key').value,
+            idempotency_key: idempotencyKey,
           })
         });
         const data = await res.json();

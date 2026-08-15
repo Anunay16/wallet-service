@@ -48,7 +48,7 @@ func InitializeServer(gormDB *gorm.DB, cfg *config.Config, log *zap.Logger) *Ser
 	app.Use(middleware.NewLoggerMiddleware(log))
 
 	// Static web UI
-	app.Static("/", "./web")
+	app.Static("/", "./ui")
 
 	// Public routes
 	app.Get("/health", healthHdlr.HealthCheck)

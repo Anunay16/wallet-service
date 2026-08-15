@@ -82,7 +82,7 @@ wallet-service/
 │   ├── 000003_create_transfers.down.sql
 │   ├── 000004_create_idempotency_keys.up.sql
 │   └── 000004_create_idempotency_keys.down.sql
-├── web/
+├── ui/
 │   └── index.html                         # Single-page UI (HTML/JS/CSS — no framework)
 ├── config.yaml                            # Non-secret configuration
 ├── Dockerfile
