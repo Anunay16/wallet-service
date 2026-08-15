@@ -1,6 +1,7 @@
 services:
   - type: web
     name: wallet-service
+    region: singapore
     env: docker
     dockerfilePath: Dockerfile
     plan: free
@@ -35,6 +36,8 @@ services:
 
 databases:
   - name: wallet-postgres
+    region: singapore
     databaseName: walletdb
     user: wallet
     plan: free
+
