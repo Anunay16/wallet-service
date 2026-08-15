@@ -45,15 +45,15 @@ func (r *TransferRepository) ExecuteAtomicTransfer(
 
 	txErr := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Deadlock prevention: sort lock targets in ascending UUID string order
-		firstID, secondID := req.From, req.To
-		if strings.Compare(firstID.String(), secondID.String()) > 0 {
-			firstID, secondID = secondID, firstID
+		firstUserID, secondUserID := req.From, req.To
+		if strings.Compare(firstUserID.String(), secondUserID.String()) > 0 {
+			firstUserID, secondUserID = secondUserID, firstUserID
 		}
 
 		var lockedWallets []domain.Wallet
 		err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
-			Where("id IN ?", []uuid.UUID{firstID, secondID}).
-			Order("id ASC").
+			Where("user_id IN ?", []uuid.UUID{firstUserID, secondUserID}).
+			Order("user_id ASC").
 			Find(&lockedWallets).Error
 		if err != nil {
 			return fmt.Errorf("failed to acquire wallet row locks: %w", err)
@@ -61,11 +61,11 @@ func (r *TransferRepository) ExecuteAtomicTransfer(
 
 		wallets := make(map[uuid.UUID]domain.Wallet)
 		for _, w := range lockedWallets {
-			wallets[w.ID] = w
+			wallets[w.UserID] = w
 		}
 
 		fromWallet, fromExists := wallets[req.From]
-		_, toExists := wallets[req.To]
+		toWallet, toExists := wallets[req.To]
 		if !fromExists || !toExists {
 			return domain.ErrWalletNotFound
 		}
@@ -79,8 +79,8 @@ func (r *TransferRepository) ExecuteAtomicTransfer(
 			reason := "insufficient_funds"
 			transfer := domain.Transfer{
 				ID:             uuid.New(),
-				FromWalletID:   req.From,
-				ToWalletID:     req.To,
+				FromWalletID:   fromWallet.ID,
+				ToWalletID:     toWallet.ID,
 				Amount:         req.Amount,
 				Status:         domain.TransferStatusDeclined,
 				IdempotencyKey: req.IdempotencyKey,
@@ -120,7 +120,7 @@ func (r *TransferRepository) ExecuteAtomicTransfer(
 
 		// Sufficient funds: Debit sender
 		res := tx.Model(&domain.Wallet{}).
-			Where("id = ? AND balance >= ?", req.From, req.Amount).
+			Where("id = ? AND balance >= ?", fromWallet.ID, req.Amount).
 			Update("balance", gorm.Expr("balance - ?", req.Amount))
 		if res.Error != nil {
 			return fmt.Errorf("failed to debit sender wallet: %w", res.Error)
@@ -131,7 +131,7 @@ func (r *TransferRepository) ExecuteAtomicTransfer(
 
 		// Credit receiver
 		if err := tx.Model(&domain.Wallet{}).
-			Where("id = ?", req.To).
+			Where("id = ?", toWallet.ID).
 			Update("balance", gorm.Expr("balance + ?", req.Amount)).Error; err != nil {
 			return fmt.Errorf("failed to credit receiver wallet: %w", err)
 		}
@@ -139,8 +139,8 @@ func (r *TransferRepository) ExecuteAtomicTransfer(
 		// Record completed transfer
 		transfer := domain.Transfer{
 			ID:             uuid.New(),
-			FromWalletID:   req.From,
-			ToWalletID:     req.To,
+			FromWalletID:   fromWallet.ID,
+			ToWalletID:     toWallet.ID,
 			Amount:         req.Amount,
 			Status:         domain.TransferStatusCompleted,
 			IdempotencyKey: req.IdempotencyKey,

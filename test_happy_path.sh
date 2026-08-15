@@ -27,6 +27,7 @@ ALICE_REG=$(curl -s -X POST "$BASE_URL/auth/register" \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"$ALICE_USER\",\"email\":\"$ALICE_USER@example.com\",\"password\":\"password123\"}")
 echo "$ALICE_REG" | jq .
+ALICE_USER_ID=$(echo "$ALICE_REG" | jq -r .id)
 
 # 3. Register Bob
 echo -e "\n[Step 3] Registering User: $BOB_USER..."
@@ -34,6 +35,7 @@ BOB_REG=$(curl -s -X POST "$BASE_URL/auth/register" \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"$BOB_USER\",\"email\":\"$BOB_USER@example.com\",\"password\":\"password123\"}")
 echo "$BOB_REG" | jq .
+BOB_USER_ID=$(echo "$BOB_REG" | jq -r .id)
 
 # 4. Login Alice & Bob
 echo -e "\n[Step 4] Logging in users to acquire JWT tokens..."
@@ -56,8 +58,8 @@ ALICE_WALLET=$(curl -s -X POST "$BASE_URL/wallets" \
 BOB_WALLET=$(curl -s -X POST "$BASE_URL/wallets" \
   -H "Authorization: Bearer $BOB_TOKEN" | jq -r .id)
 
-echo "Alice Wallet ID: $ALICE_WALLET"
-echo "Bob Wallet ID:   $BOB_WALLET"
+echo "Alice Wallet ID: $ALICE_WALLET (User ID: $ALICE_USER_ID)"
+echo "Bob Wallet ID:   $BOB_WALLET (User ID: $BOB_USER_ID)"
 
 # 6. Verify Seed Balances
 echo -e "\n[Step 6] Verifying Alice initial seed balance..."
@@ -65,7 +67,7 @@ ALICE_BAL_INIT=$(curl -s "$BASE_URL/wallets/$ALICE_WALLET" \
   -H "Authorization: Bearer $ALICE_TOKEN" | jq .balance)
 echo "Alice Initial Balance: $ALICE_BAL_INIT paise (= ₹$(($ALICE_BAL_INIT / 100)))"
 
-# 7. Execute Peer-to-Peer Transfer
+# 7. Execute Peer-to-Peer Transfer (using User IDs)
 IDEM_KEY="txn-${TIMESTAMP}"
 TRANSFER_AMOUNT=50000
 
@@ -74,8 +76,8 @@ TRANSFER_RESP=$(curl -s -X POST "$BASE_URL/transfers" \
   -H "Authorization: Bearer $ALICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"from\": \"$ALICE_WALLET\",
-    \"to\": \"$BOB_WALLET\",
+    \"from\": \"$ALICE_USER_ID\",
+    \"to\": \"$BOB_USER_ID\",
     \"amount\": $TRANSFER_AMOUNT,
     \"idempotency_key\": \"$IDEM_KEY\"
   }")
@@ -89,8 +91,8 @@ REPLAY_RESP=$(curl -s -X POST "$BASE_URL/transfers" \
   -H "Authorization: Bearer $ALICE_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
-    \"from\": \"$ALICE_WALLET\",
-    \"to\": \"$BOB_WALLET\",
+    \"from\": \"$ALICE_USER_ID\",
+    \"to\": \"$BOB_USER_ID\",
     \"amount\": $TRANSFER_AMOUNT,
     \"idempotency_key\": \"$IDEM_KEY\"
   }")

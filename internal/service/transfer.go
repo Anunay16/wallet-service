@@ -50,6 +50,10 @@ func (s *TransferService) InitiateTransfer(
 ) (*domain.IdempotencyRecord, error) {
 	req.IdempotencyKey = strings.TrimSpace(req.IdempotencyKey)
 
+	if req.From == uuid.Nil {
+		req.From = callerUserID
+	}
+
 	if req.Amount <= 0 {
 		return nil, domain.ErrInvalidAmount
 	}
@@ -60,12 +64,8 @@ func (s *TransferService) InitiateTransfer(
 		return nil, domain.ErrEmptyIdempotencyKey
 	}
 
-	// Ensure caller owns the source wallet
-	fromWallet, err := s.walletRepo.GetWalletByID(ctx, req.From)
-	if err != nil {
-		return nil, err
-	}
-	if fromWallet.UserID != callerUserID {
+	// Ensure caller is initiating their own transfer
+	if req.From != callerUserID {
 		return nil, domain.ErrForbiddenWalletAccess
 	}
 

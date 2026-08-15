@@ -339,8 +339,8 @@
 
         <div id="wallet-info" style="display: none; margin-top: 1.5rem;">
           <div class="form-group">
-            <label>Wallet ID (Share this ID to receive transfers)</label>
-            <input type="text" id="wallet-id-display" class="form-control" readonly style="font-family: 'JetBrains Mono', monospace;">
+            <label>Your User ID (Share this ID to receive transfers)</label>
+            <input type="text" id="user-id-display" class="form-control" readonly style="font-family: 'JetBrains Mono', monospace;">
           </div>
           <div class="balance-display">
             <div style="font-size: 0.85rem; text-transform: uppercase; color: #a5b4fc; letter-spacing: 0.05em;">Current Balance</div>
@@ -358,12 +358,8 @@
         <h2>Initiate Peer-to-Peer Transfer</h2>
         <form id="transfer-form">
           <div class="form-group">
-            <label>From Wallet ID</label>
-            <input type="text" id="transfer-from" class="form-control" placeholder="Your wallet UUID" required style="font-family: 'JetBrains Mono', monospace;">
-          </div>
-          <div class="form-group">
-            <label>To Wallet ID (Recipient)</label>
-            <input type="text" id="transfer-to" class="form-control" placeholder="Recipient wallet UUID" required style="font-family: 'JetBrains Mono', monospace;">
+            <label>To User ID (Recipient)</label>
+            <input type="text" id="transfer-to" class="form-control" placeholder="Recipient User UUID" required style="font-family: 'JetBrains Mono', monospace;">
           </div>
           <div class="form-group">
             <label>Amount (in paise)</label>
@@ -508,10 +504,8 @@
         const data = await res.json();
         output.textContent = `HTTP ${res.status}\n` + JSON.stringify(data, null, 2);
 
-        if (res.ok && data.id) {
-          currentWalletID = data.id;
-          document.getElementById('wallet-id-display').value = data.id;
-          document.getElementById('transfer-from').value = data.id;
+        if (res.ok && data.user_id) {
+          document.getElementById('user-id-display').value = data.user_id;
           document.getElementById('balance-rupees').textContent = `₹${(data.balance / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
           document.getElementById('balance-paise').textContent = `(${data.balance.toLocaleString()} paise)`;
           document.getElementById('wallet-info').style.display = 'block';
@@ -542,7 +536,6 @@
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            from: document.getElementById('transfer-from').value,
             to: document.getElementById('transfer-to').value,
             amount: parseInt(document.getElementById('transfer-amount').value, 10),
             idempotency_key: idempotencyKey,

@@ -8,9 +8,9 @@ import (
 )
 
 type User struct {
-	ID           uuid.UUID `json:"id"`
-	Username     string    `json:"username"`
-	Email        string    `json:"email"`
+	ID           uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
+	Username     string    `json:"username" gorm:"uniqueIndex;not null"`
+	Email        string    `json:"email" gorm:"uniqueIndex;not null"`
 	PasswordHash string    `json:"-"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
