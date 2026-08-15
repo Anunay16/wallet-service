@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wallet Service — Peer to Peer Payments</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-card: #111827;
+      --bg-input: #1f2937;
+      --border-color: #374151;
+      --accent-primary: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99, 102, 241, 0.25);
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a5b4fc 0%, #6366f1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .session-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--danger);
+    }
+
+    .status-dot.active {
+      background-color: var(--success);
+      box-shadow: 0 0 10px var(--success);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 2rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1rem;
+      font-weight: 500;
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .tab-btn.active {
+      color: var(--accent-primary);
+      border-bottom-color: var(--accent-primary);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      color: #e0e7ff;
+    }
+
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      color: var(--text-main);
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .btn {
+      background: var(--accent-primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      background: #374151;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 640px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .balance-display {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+      border: 1px solid #4338ca;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .balance-amount {
+      font-size: 2.25rem;
+      font-weight: 700;
+      color: #6366f1;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .balance-paise {
+      font-size: 0.9rem;
+      color: #a5b4fc;
+      margin-top: 0.25rem;
+    }
+
+    .response-box {
+      background: #0d1117;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-completed { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+    .badge-declined { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+    .badge-pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>P2P Wallet Service</h1>
+      <p>High performance, transactionally safe digital wallet platform</p>
+    </header>
+
+    <div class="session-bar">
+      <div class="user-info">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="session-text" style="font-size: 0.9rem; color: var(--text-muted);">Not Authenticated</span>
+      </div>
+      <button class="btn btn-secondary" id="logout-btn" style="display: none; padding: 0.4rem 0.9rem; font-size: 0.85rem;">Logout</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="auth-tab">Authentication</button>
+      <button class="tab-btn" data-tab="wallet-tab">My Wallet</button>
+      <button class="tab-btn" data-tab="transfer-tab">Transfer Funds</button>
+      <button class="tab-btn" data-tab="status-tab">Transfer Status</button>
+    </div>
+
+    <!-- AUTH TAB -->
+    <div id="auth-tab" class="tab-content active">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Register Account</h2>
+          <form id="register-form">
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" id="reg-username" class="form-control" placeholder="alice" required>
+            </div>
+            <div class="form-group">
+              <label>Email Address</label>
+              <input type="email" id="reg-email" class="form-control" placeholder="alice@example.com" required>
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" id="reg-password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn" style="width: 100%;">Create Account</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Login</h2>
+          <form id="login-form">
+            <div class="form-group">
+              <label>Username</label>
+              <input type="text" id="login-username" class="form-control" placeholder="alice" required>
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn" style="width: 100%;">Log In</button>
+          </form>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Auth Output</h2>
+        <div id="auth-output" class="response-box">Ready...</div>
+      </div>
+    </div>
+
+    <!-- WALLET TAB -->
+    <div id="wallet-tab" class="tab-content">
+      <div class="card">
+        <h2>Wallet Dashboard</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Initialize or fetch your primary wallet balance.</p>
+        <button id="get-wallet-btn" class="btn">Get or Create My Wallet</button>
+
+        <div id="wallet-info" style="display: none; margin-top: 1.5rem;">
+          <div class="form-group">
+            <label>Wallet ID (Share this ID to receive transfers)</label>
+            <input type="text" id="wallet-id-display" class="form-control" readonly style="font-family: 'JetBrains Mono', monospace;">
+          </div>
+          <div class="balance-display">
+            <div style="font-size: 0.85rem; text-transform: uppercase; color: #a5b4fc; letter-spacing: 0.05em;">Current Balance</div>
+            <div class="balance-amount" id="balance-rupees">₹0.00</div>
+            <div class="balance-paise" id="balance-paise">(0 paise)</div>
+          </div>
+        </div>
+        <div id="wallet-output" class="response-box" style="margin-top: 1.5rem;">Ready...</div>
+      </div>
+    </div>
+
+    <!-- TRANSFER TAB -->
+    <div id="transfer-tab" class="tab-content">
+      <div class="card">
+        <h2>Initiate Peer-to-Peer Transfer</h2>
+        <form id="transfer-form">
+          <div class="form-group">
+            <label>From Wallet ID</label>
+            <input type="text" id="transfer-from" class="form-control" placeholder="Your wallet UUID" required style="font-family: 'JetBrains Mono', monospace;">
+          </div>
+          <div class="form-group">
+            <label>To Wallet ID (Recipient)</label>
+            <input type="text" id="transfer-to" class="form-control" placeholder="Recipient wallet UUID" required style="font-family: 'JetBrains Mono', monospace;">
+          </div>
+          <div class="grid-2">
+            <div class="form-group">
+              <label>Amount (in paise)</label>
+              <input type="number" id="transfer-amount" class="form-control" placeholder="50000 (= ₹500)" min="1" required>
+            </div>
+            <div class="form-group">
+              <label>Idempotency Key</label>
+              <div style="display: flex; gap: 0.5rem;">
+                <input type="text" id="transfer-idem-key" class="form-control" placeholder="txn-unique-id" required style="font-family: 'JetBrains Mono', monospace;">
+                <button type="button" id="gen-idem-btn" class="btn btn-secondary" style="white-space: nowrap;">Gen Key</button>
+              </div>
+            </div>
+          </div>
+          <button type="submit" class="btn" style="width: 100%;">Execute Transfer</button>
+        </form>
+        <div id="transfer-output" class="response-box" style="margin-top: 1.5rem;">Ready...</div>
+      </div>
+    </div>
+
+    <!-- STATUS TAB -->
+    <div id="status-tab" class="tab-content">
+      <div class="card">
+        <h2>Lookup Transfer Record</h2>
+        <form id="status-form">
+          <div class="form-group">
+            <label>Transfer UUID</label>
+            <input type="text" id="status-transfer-id" class="form-control" placeholder="Transfer UUID" required style="font-family: 'JetBrains Mono', monospace;">
+          </div>
+          <button type="submit" class="btn">Query Status</button>
+        </form>
+        <div id="status-output" class="response-box" style="margin-top: 1.5rem;">Ready...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let token = localStorage.getItem('wallet_token') || '';
+    let currentWalletID = '';
+
+    const statusDot = document.getElementById('status-dot');
+    const sessionText = document.getElementById('session-text');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    function updateSessionUI() {
+      if (token) {
+        statusDot.classList.add('active');
+        sessionText.textContent = 'Authenticated';
+        sessionText.style.color = '#10b981';
+        logoutBtn.style.display = 'block';
+      } else {
+        statusDot.classList.remove('active');
+        sessionText.textContent = 'Not Authenticated';
+        sessionText.style.color = 'var(--text-muted)';
+        logoutBtn.style.display = 'none';
+      }
+    }
+    updateSessionUI();
+
+    logoutBtn.addEventListener('click', () => {
+      token = '';
+      localStorage.removeItem('wallet_token');
+      updateSessionUI();
+      document.getElementById('auth-output').textContent = 'Logged out successfully.';
+    });
+
+    // Tab Navigation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    // Generate Idempotency Key
+    document.getElementById('gen-idem-btn').addEventListener('click', () => {
+      document.getElementById('transfer-idem-key').value = 'txn-' + Math.random().toString(36).substring(2, 10);
+    });
+
+    // Register Form
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const output = document.getElementById('auth-output');
+      output.textContent = 'Registering user...';
+
+      try {
+        const res = await fetch('/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('reg-username').value,
+            email: document.getElementById('reg-email').value,
+            password: document.getElementById('reg-password').value,
+          })
+        });
+        const data = await res.json();
+        output.textContent = `HTTP ${res.status}\n` + JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    // Login Form
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const output = document.getElementById('auth-output');
+      output.textContent = 'Logging in...';
+
+      try {
+        const res = await fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('login-username').value,
+            password: document.getElementById('login-password').value,
+          })
+        });
+        const data = await res.json();
+        output.textContent = `HTTP ${res.status}\n` + JSON.stringify(data, null, 2);
+
+        if (res.ok && data.token) {
+          token = data.token;
+          localStorage.setItem('wallet_token', token);
+          updateSessionUI();
+        }
+      } catch (err) {
+        output.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    // Get or Create Wallet
+    document.getElementById('get-wallet-btn').addEventListener('click', async () => {
+      const output = document.getElementById('wallet-output');
+      if (!token) {
+        output.textContent = 'Error: Please log in first.';
+        return;
+      }
+
+      output.textContent = 'Fetching wallet...';
+      try {
+        const res = await fetch('/wallets', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        output.textContent = `HTTP ${res.status}\n` + JSON.stringify(data, null, 2);
+
+        if (res.ok && data.id) {
+          currentWalletID = data.id;
+          document.getElementById('wallet-id-display').value = data.id;
+          document.getElementById('transfer-from').value = data.id;
+          document.getElementById('balance-rupees').textContent = `₹${(data.balance / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+          document.getElementById('balance-paise').textContent = `(${data.balance.toLocaleString()} paise)`;
+          document.getElementById('wallet-info').style.display = 'block';
+        }
+      } catch (err) {
+        output.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    // Transfer Form
+    document.getElementById('transfer-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const output = document.getElementById('transfer-output');
+      if (!token) {
+        output.textContent = 'Error: Please log in first.';
+        return;
+      }
+
+      output.textContent = 'Executing transfer...';
+      try {
+        const res = await fetch('/transfers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            from: document.getElementById('transfer-from').value,
+            to: document.getElementById('transfer-to').value,
+            amount: parseInt(document.getElementById('transfer-amount').value, 10),
+            idempotency_key: document.getElementById('transfer-idem-key').value,
+          })
+        });
+        const data = await res.json();
+        output.textContent = `HTTP ${res.status}\n` + JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = 'Error: ' + err.message;
+      }
+    });
+
+    // Status Form
+    document.getElementById('status-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const output = document.getElementById('status-output');
+      if (!token) {
+        output.textContent = 'Error: Please log in first.';
+        return;
+      }
+
+      const id = document.getElementById('status-transfer-id').value;
+      output.textContent = `Querying transfer ${id}...`;
+
+      try {
+        const res = await fetch(`/transfers/${id}`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        output.textContent = `HTTP ${res.status}\n` + JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = 'Error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
