@@ -11,7 +11,8 @@ import (
 
 func NewGormDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	gormCfg := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent),
+		Logger:         logger.Default.LogMode(logger.Silent),
+		TranslateError: true,
 	}
 
 	db, err := gorm.Open(postgres.Open(cfg.DSN()), gormCfg)
