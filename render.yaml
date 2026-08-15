@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: wallet-service
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: WALLET_SERVER_PORT
+        value: "8080"
+      - key: WALLET_DATABASE_HOST
+        fromDatabase:
+          name: wallet-postgres
+          property: host
+      - key: WALLET_DATABASE_PORT
+        fromDatabase:
+          name: wallet-postgres
+          property: port
+      - key: WALLET_DATABASE_USER
+        fromDatabase:
+          name: wallet-postgres
+          property: user
+      - key: WALLET_DATABASE_PASSWORD
+        fromDatabase:
+          name: wallet-postgres
+          property: password
+      - key: WALLET_DATABASE_NAME
+        fromDatabase:
+          name: wallet-postgres
+          property: database
+      - key: WALLET_DATABASE_SSLMODE
+        value: "require"
+      - key: WALLET_AUTH_JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: wallet-postgres
+    databaseName: walletdb
+    user: wallet
+    plan: free
