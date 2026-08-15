@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wallet_postgres
+    environment:
+      POSTGRES_USER: wallet
+      POSTGRES_PASSWORD: wallet_secret
+      POSTGRES_DB: walletdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/datas
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wallet -d walletdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wallet_app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      WALLET_DATABASE_HOST: postgres
+      WALLET_DATABASE_PASSWORD: wallet_secret
+      WALLET_AUTH_JWT_SECRET: super-secret-change-me
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  pgdata:
