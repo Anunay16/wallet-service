@@ -1,0 +1,23 @@
+server:
+  port: "8080"
+  read_timeout: 30s
+  write_timeout: 30s
+
+database:
+  host: "localhost"
+  port: "5432"
+  user: "wallet"
+  password: "wallet_secret"
+  name: "walletdb"
+  sslmode: "disable"
+  max_open_conns: 25
+  max_idle_conns: 5
+  max_lifetime: "5m"
+
+auth:
+  jwt_secret: "change-me-in-production"
+  token_expiry_hours: 24
+
+log:
+  level: "info"
+  format: "json"
