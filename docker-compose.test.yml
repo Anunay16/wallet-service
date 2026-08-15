@@ -1,0 +1,21 @@
+# Ephemeral Postgres for the e2e test suite.
+# Uses port 5433 so it never conflicts with a running dev database on 5432.
+# No named volume — data is destroyed when the container is removed.
+services:
+  postgres-test:
+    image: postgres:16-alpine
+    container_name: wallet_postgres_test
+    environment:
+      POSTGRES_USER: wallet_test
+      POSTGRES_PASSWORD: wallet_test_secret
+      POSTGRES_DB: walletdb_test
+    ports:
+      - "5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data   # in-memory → fast, no leftover state
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wallet_test -d walletdb_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
