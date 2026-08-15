@@ -1,2 +1,0 @@
-DROP TABLE IF EXISTS transfers CASCADE;
-DROP TYPE IF EXISTS transfer_status;

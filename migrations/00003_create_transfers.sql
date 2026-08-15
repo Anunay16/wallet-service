@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'transfer_status') THEN
@@ -24,3 +26,10 @@ CREATE INDEX IF NOT EXISTS idx_transfers_from_wallet  ON transfers(from_wallet_i
 CREATE INDEX IF NOT EXISTS idx_transfers_to_wallet    ON transfers(to_wallet_id);
 CREATE INDEX IF NOT EXISTS idx_transfers_idem_key     ON transfers(idempotency_key, initiated_by);
 CREATE INDEX IF NOT EXISTS idx_transfers_initiated_by ON transfers(initiated_by);
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+DROP TABLE IF EXISTS transfers CASCADE;
+DROP TYPE IF EXISTS transfer_status;
+-- +goose StatementEnd

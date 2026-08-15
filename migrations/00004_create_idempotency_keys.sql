@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 CREATE TABLE IF NOT EXISTS idempotency_keys (
     idempotency_key TEXT        NOT NULL,
     user_id         UUID        NOT NULL REFERENCES users(id),
@@ -12,3 +14,9 @@ CREATE TABLE IF NOT EXISTS idempotency_keys (
 );
 
 CREATE INDEX IF NOT EXISTS idx_idem_keys_expires ON idempotency_keys(expires_at);
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+DROP TABLE IF EXISTS idempotency_keys CASCADE;
+-- +goose StatementEnd

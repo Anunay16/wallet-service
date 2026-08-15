@@ -50,7 +50,7 @@ wallet-service/
 ├── internal/
 │   ├── db/
 │   │   ├── db.go                          # pgxpool initialization
-│   │   └── migrate.go                     # golang-migrate runner (go:embed)
+│   │   └── migrate.go                     # goose migration runner (go:embed)
 │   ├── domain/
 │   │   ├── models.go                      # Domain types: User, Wallet, Transfer, IdempotencyKey
 │   │   └── errors.go                      # Sentinel errors: ErrInsufficientFunds, ErrConflict
@@ -544,9 +544,7 @@ github.com/gofiber/fiber/v2              # HTTP framework
 github.com/gofiber/contrib/jwt           # JWT middleware for Fiber
 github.com/golang-jwt/jwt/v5             # JWT token generation/parsing
 github.com/jackc/pgx/v5                 # PostgreSQL driver + pgxpool
-github.com/golang-migrate/migrate/v4     # Database migrations
-  └─ database/postgres                   # Postgres driver for migrate
-  └─ source/iofs                         # go:embed source for migrate
+github.com/pressly/goose/v3              # Database migrations
 github.com/spf13/viper                   # Configuration management
 github.com/google/uuid                   # UUID generation
 golang.org/x/crypto                      # bcrypt for password hashing
@@ -598,9 +596,9 @@ All API calls use `fetch()` with `Authorization: Bearer <token>`.
 Step 1 :  go mod init github.com/anunay/wallet-service
 Step 2 :  go get <all dependencies>
 Step 3 :  config/config.go                 (Viper loader + Config structs)
-Step 4 :  migrations/                      (4 × up.sql + 4 × down.sql)
+Step 4 :  migrations/                      (4 × goose .sql migrations)
 Step 5 :  internal/db/db.go               (pgxpool setup)
-Step 6 :  internal/db/migrate.go          (go:embed + golang-migrate runner)
+Step 6 :  internal/db/migrate.go          (go:embed + goose runner)
 Step 7 :  internal/domain/models.go       (domain types)
 Step 8 :  internal/domain/errors.go       (sentinel errors)
 Step 9 :  internal/repository/user.go
