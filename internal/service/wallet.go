@@ -14,10 +14,14 @@ type walletRepo interface {
 
 type WalletService struct {
 	walletRepo walletRepo
+	userRepo   userRepo
 }
 
-func NewWalletService(walletRepo walletRepo) *WalletService {
-	return &WalletService{walletRepo: walletRepo}
+func NewWalletService(walletRepo walletRepo, userRepo userRepo) *WalletService {
+	return &WalletService{
+		walletRepo: walletRepo,
+		userRepo:   userRepo,
+	}
 }
 
 func (s *WalletService) GetOrCreateWallet(ctx context.Context, userID uuid.UUID) (*domain.WalletResponse, error) {
@@ -25,9 +29,15 @@ func (s *WalletService) GetOrCreateWallet(ctx context.Context, userID uuid.UUID)
 	if err != nil {
 		return nil, err
 	}
+
+	user, err := s.userRepo.GetUserByID(ctx, w.UserID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &domain.WalletResponse{
 		ID:        w.ID,
-		UserID:    w.UserID,
+		Username:  user.Username,
 		Balance:   w.Balance,
 		CreatedAt: w.CreatedAt,
 		UpdatedAt: w.UpdatedAt,
@@ -44,9 +54,14 @@ func (s *WalletService) GetWalletByID(ctx context.Context, walletID uuid.UUID, c
 		return nil, domain.ErrForbiddenWalletAccess
 	}
 
+	user, err := s.userRepo.GetUserByID(ctx, w.UserID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &domain.WalletResponse{
 		ID:        w.ID,
-		UserID:    w.UserID,
+		Username:  user.Username,
 		Balance:   w.Balance,
 		CreatedAt: w.CreatedAt,
 		UpdatedAt: w.UpdatedAt,

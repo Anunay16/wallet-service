@@ -265,13 +265,13 @@ Prefix: `WALLET_`, separator: `_` replacing `.`
 **`POST /wallets`** (no request body)
 ```json
 // Response 200 (existing) or 201 (newly created)
-{ "id": "uuid", "user_id": "uuid", "balance": 1000000, "created_at": "..." }
+{ "id": "uuid", "username": "alice", "balance": 1000000, "created_at": "..." }
 ```
 
 **`GET /wallets/:id`**
 ```json
 // Response 200
-{ "id": "uuid", "user_id": "uuid", "balance": 950000, "updated_at": "..." }
+{ "id": "uuid", "username": "alice", "balance": 950000, "updated_at": "..." }
 // Response 403 — caller does not own this wallet
 { "error": "forbidden" }
 ```

@@ -86,7 +86,7 @@ type UserResponse struct {
 
 type WalletResponse struct {
 	ID        uuid.UUID `json:"id"`
-	UserID    uuid.UUID `json:"user_id"`
+	Username  string    `json:"username"`
 	Balance   int64     `json:"balance"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

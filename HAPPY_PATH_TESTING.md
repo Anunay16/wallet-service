@@ -137,7 +137,7 @@ Get or create wallets for both users. Each new wallet is seeded with 1,000,000 p
 ```json
 {
   "id": "<ALICE_WALLET_UUID>",
-  "user_id": "<ALICE_USER_UUID>",
+  "username": "<ALICE_USERNAME>",
   "balance": 1000000,
   "created_at": "...",
   "updated_at": "..."
@@ -153,7 +153,7 @@ Get or create wallets for both users. Each new wallet is seeded with 1,000,000 p
 ```json
 {
   "id": "<BOB_WALLET_UUID>",
-  "user_id": "<BOB_USER_UUID>",
+  "username": "<BOB_USERNAME>",
   "balance": 1000000,
   "created_at": "...",
   "updated_at": "..."
