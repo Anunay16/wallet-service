@@ -1,0 +1,14 @@
+1. Conservation + No-Overdraft Mechanism:
+- Used: SELECT ... FOR UPDATE in deterministic (ascending UUID) lock order + atomic conditional debit (UPDATE ... WHERE balance >= amount) + DB CHECK (balance >= 0) constraint.
+- Deadlock Avoidance: User IDs are sorted in ascending string order prior to locking so all concurrent transactions acquire row locks in the exact same global order, making lock cycle dependencies impossible.
+- Why Simplest & Correct: Guarantees row-level isolation and atomic balance debit/credit within a single ACID transaction without retry overhead or serialization failures.
+- Alternatives Rejected: Serializable isolation (rejected due to frequent 40001 serialization retries under load), Redis Redlock/distributed locks (rejected to avoid external complexity/split-brain risks), 2PC/Sagas (rejected as unnecessary for single DB).
+
+2. Idempotency Location & Enforcement:
+- Enforcement: Database primary key constraint PRIMARY KEY (idempotency_key, user_id) on the idempotency_keys table.
+- Transaction Scope: Committed in the exact same database transaction as the debit/credit and transfer record.
+- Same-Key / Different-Body Replay: SHA-256 canonical request hash (from:to:amount) is checked against the saved record. Matching hash returns cached response; differing hash returns HTTP 409 Conflict.
+
+3. Consistency vs Availability:
+- Choice: Strong Consistency (CP / ACID). Correctness, balance conservation, and zero overdrafts are non-negotiable.
+- Trade-offs: Gave up write availability during network partitions, low latency on hot-wallet contention (serial row queueing), and masterless active-active multi-region write scaling.
