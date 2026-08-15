@@ -1,9 +1,13 @@
-.PHONY: build-and-run test-e2e test-e2e-db-up test-e2e-db-down
+.PHONY: build-and-run test-unit test-e2e test-e2e-db-up test-e2e-db-down
 
 # ── Dev ──────────────────────────────────────────────────────────────────────
 build-and-run:
 	docker compose down --remove-orphans
 	docker compose up --build -d
+
+# ── Unit tests ────────────────────────────────────────────────────────────────
+test-unit:
+	go test -race -v -count=1 ./internal/handler/... ./internal/service/... ./internal/repository/...
 
 # ── E2E test database ────────────────────────────────────────────────────────
 # Starts an ephemeral Postgres on port 5433 (no volume, tmpfs only).

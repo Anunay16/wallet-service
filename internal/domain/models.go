@@ -17,8 +17,8 @@ type User struct {
 }
 
 type Wallet struct {
-	ID        uuid.UUID `json:"id"`
-	UserID    uuid.UUID `json:"user_id"`
+	ID        uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
+	UserID    uuid.UUID `json:"user_id" gorm:"type:uuid;uniqueIndex;not null"`
 	Balance   int64     `json:"balance"` // In paise (BIGINT)
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -30,28 +30,28 @@ const (
 	TransferStatusPending   TransferStatus = "pending"
 	TransferStatusCompleted TransferStatus = "completed"
 	TransferStatusFailed    TransferStatus = "failed"
-	TransferStatusDeclined TransferStatus = "declined"
+	TransferStatusDeclined  TransferStatus = "declined"
 )
 
 type Transfer struct {
-	ID             uuid.UUID      `json:"id"`
-	FromWalletID   uuid.UUID      `json:"from_wallet_id"`
-	ToWalletID     uuid.UUID      `json:"to_wallet_id"`
-	Amount         int64          `json:"amount"` // In paise
-	Status         TransferStatus `json:"status"`
-	IdempotencyKey string         `json:"idempotency_key"`
-	InitiatedBy    uuid.UUID      `json:"initiated_by"`
+	ID             uuid.UUID      `json:"id" gorm:"type:uuid;primaryKey"`
+	FromWalletID   uuid.UUID      `json:"from_wallet_id" gorm:"type:uuid;not null"`
+	ToWalletID     uuid.UUID      `json:"to_wallet_id" gorm:"type:uuid;not null"`
+	Amount         int64          `json:"amount" gorm:"not null"` // In paise
+	Status         TransferStatus `json:"status" gorm:"not null"`
+	IdempotencyKey string         `json:"idempotency_key" gorm:"not null"`
+	InitiatedBy    uuid.UUID      `json:"initiated_by" gorm:"type:uuid;not null"`
 	FailureReason  *string        `json:"failure_reason,omitempty"`
 	CreatedAt      time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 }
 
 type IdempotencyRecord struct {
-	IdempotencyKey string          `json:"idempotency_key"`
-	UserID         uuid.UUID       `json:"user_id"`
-	RequestHash    string          `json:"request_hash"`
-	TransferID     *uuid.UUID      `json:"transfer_id,omitempty"`
-	ResponseStatus int             `json:"response_status"`
+	IdempotencyKey string          `json:"idempotency_key" gorm:"primaryKey"`
+	UserID         uuid.UUID       `json:"user_id" gorm:"type:uuid;primaryKey"`
+	RequestHash    string          `json:"request_hash" gorm:"not null"`
+	TransferID     *uuid.UUID      `json:"transfer_id,omitempty" gorm:"type:uuid"`
+	ResponseStatus int             `json:"response_status" gorm:"not null"`
 	ResponseBody   json.RawMessage `json:"response_body"`
 	CreatedAt      time.Time       `json:"created_at"`
 	ExpiresAt      time.Time       `json:"expires_at"`

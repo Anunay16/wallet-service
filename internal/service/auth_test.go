@@ -2,91 +2,188 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
 	"github.com/anunay/wallet-service/config"
 	"github.com/anunay/wallet-service/internal/domain"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type mockUserRepo struct {
-	users map[string]*domain.User
+	createUserFunc        func(ctx context.Context, user *domain.User) error
+	getUserByUsernameFunc func(ctx context.Context, username string) (*domain.User, error)
+	getUserByIDFunc       func(ctx context.Context, id uuid.UUID) (*domain.User, error)
 }
 
 func (m *mockUserRepo) CreateUser(ctx context.Context, user *domain.User) error {
-	if _, ok := m.users[user.Username]; ok {
-		return domain.ErrUserAlreadyExists
+	if m.createUserFunc != nil {
+		return m.createUserFunc(ctx, user)
 	}
-	user.ID = uuid.New()
-	user.CreatedAt = time.Now()
-	user.UpdatedAt = time.Now()
-	m.users[user.Username] = user
-	return nil
+	return errors.New("not implemented")
 }
 
 func (m *mockUserRepo) GetUserByUsername(ctx context.Context, username string) (*domain.User, error) {
-	u, ok := m.users[username]
-	if !ok {
-		return nil, domain.ErrUserNotFound
+	if m.getUserByUsernameFunc != nil {
+		return m.getUserByUsernameFunc(ctx, username)
 	}
-	return u, nil
+	return nil, errors.New("not implemented")
 }
 
 func (m *mockUserRepo) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-	for _, u := range m.users {
-		if u.ID == id {
-			return u, nil
-		}
+	if m.getUserByIDFunc != nil {
+		return m.getUserByIDFunc(ctx, id)
 	}
-	return nil, domain.ErrUserNotFound
+	return nil, errors.New("not implemented")
 }
 
-func TestAuthService_RegisterAndLogin(t *testing.T) {
-	repo := &mockUserRepo{users: make(map[string]*domain.User)}
-	cfg := config.AuthConfig{JWTSecret: "test-secret", TokenExpiryHours: 24}
-	authSvc := NewAuthService(repo, cfg)
-
-	ctx := context.Background()
-
-	// 1. Successful Register
-	regReq := domain.RegisterRequest{
-		Username: "alice",
-		Email:    "alice@example.com",
-		Password: "password123",
-	}
-	userResp, err := authSvc.Register(ctx, regReq)
-	if err != nil {
-		t.Fatalf("expected no error on register, got: %v", err)
-	}
-	if userResp.Username != "alice" {
-		t.Errorf("expected username alice, got: %s", userResp.Username)
-	}
-
-	// 2. Duplicate Register
-	_, err = authSvc.Register(ctx, regReq)
-	if err != domain.ErrUserAlreadyExists {
-		t.Errorf("expected ErrUserAlreadyExists, got: %v", err)
-	}
-
-	// 3. Successful Login
-	loginResp, err := authSvc.Login(ctx, domain.LoginRequest{
-		Username: "alice",
-		Password: "password123",
+func TestNewAuthService(t *testing.T) {
+	t.Run("Positive: valid userRepo and AuthConfig", func(t *testing.T) {
+		repo := &mockUserRepo{}
+		cfg := config.AuthConfig{JWTSecret: "secret", TokenExpiryHours: 24}
+		svc := NewAuthService(repo, cfg)
+		if svc == nil || svc.userRepo == nil {
+			t.Errorf("expected non-nil AuthService")
+		}
 	})
-	if err != nil {
-		t.Fatalf("expected no error on login, got: %v", err)
-	}
-	if loginResp.Token == "" {
-		t.Errorf("expected non-empty token")
+
+	t.Run("Negative 1: nil userRepo dependency", func(t *testing.T) {
+		cfg := config.AuthConfig{JWTSecret: "secret"}
+		svc := NewAuthService(nil, cfg)
+		if svc == nil {
+			t.Errorf("expected non-nil struct instance")
+		}
+		if svc.userRepo != nil {
+			t.Errorf("expected nil userRepo")
+		}
+	})
+
+	t.Run("Negative 2: zero AuthConfig struct", func(t *testing.T) {
+		repo := &mockUserRepo{}
+		svc := NewAuthService(repo, config.AuthConfig{})
+		if svc == nil {
+			t.Errorf("expected non-nil AuthService")
+		}
+		if svc.cfg.JWTSecret != "" {
+			t.Errorf("expected empty JWTSecret")
+		}
+	})
+}
+
+func TestAuthService_Register(t *testing.T) {
+	cfg := config.AuthConfig{JWTSecret: "secret", TokenExpiryHours: 24}
+
+	t.Run("Positive: successful user registration", func(t *testing.T) {
+		repo := &mockUserRepo{
+			createUserFunc: func(ctx context.Context, user *domain.User) error {
+				user.ID = uuid.New()
+				return nil
+			},
+		}
+		svc := NewAuthService(repo, cfg)
+		resp, err := svc.Register(context.Background(), domain.RegisterRequest{
+			Username: "alice",
+			Email:    "alice@example.com",
+			Password: "password123",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resp.Username != "alice" || resp.Email != "alice@example.com" {
+			t.Errorf("unexpected response: %+v", resp)
+		}
+	})
+
+	t.Run("Negative 1: missing required fields", func(t *testing.T) {
+		repo := &mockUserRepo{}
+		svc := NewAuthService(repo, cfg)
+		_, err := svc.Register(context.Background(), domain.RegisterRequest{
+			Username: "",
+			Email:    "alice@example.com",
+			Password: "password123",
+		})
+		if err == nil {
+			t.Errorf("expected error for missing username")
+		}
+	})
+
+	t.Run("Negative 2: duplicate user error from repo", func(t *testing.T) {
+		repo := &mockUserRepo{
+			createUserFunc: func(ctx context.Context, user *domain.User) error {
+				return domain.ErrUserAlreadyExists
+			},
+		}
+		svc := NewAuthService(repo, cfg)
+		_, err := svc.Register(context.Background(), domain.RegisterRequest{
+			Username: "alice",
+			Email:    "alice@example.com",
+			Password: "password123",
+		})
+		if !errors.Is(err, domain.ErrUserAlreadyExists) {
+			t.Errorf("expected ErrUserAlreadyExists, got: %v", err)
+		}
+	})
+}
+
+func TestAuthService_Login(t *testing.T) {
+	cfg := config.AuthConfig{JWTSecret: "secret", TokenExpiryHours: 24}
+	password := "password123"
+	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	validUser := &domain.User{
+		ID:           uuid.New(),
+		Username:     "alice",
+		Email:        "alice@example.com",
+		PasswordHash: string(hash),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}
 
-	// 4. Invalid Password Login
-	_, err = authSvc.Login(ctx, domain.LoginRequest{
-		Username: "alice",
-		Password: "wrongpassword",
+	t.Run("Positive: successful login with correct credentials", func(t *testing.T) {
+		repo := &mockUserRepo{
+			getUserByUsernameFunc: func(ctx context.Context, username string) (*domain.User, error) {
+				return validUser, nil
+			},
+		}
+		svc := NewAuthService(repo, cfg)
+		resp, err := svc.Login(context.Background(), domain.LoginRequest{
+			Username: "alice",
+			Password: password,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if resp.Token == "" {
+			t.Errorf("expected non-empty JWT token")
+		}
 	})
-	if err != domain.ErrInvalidCredentials {
-		t.Errorf("expected ErrInvalidCredentials, got: %v", err)
-	}
+
+	t.Run("Negative 1: empty credentials provided", func(t *testing.T) {
+		repo := &mockUserRepo{}
+		svc := NewAuthService(repo, cfg)
+		_, err := svc.Login(context.Background(), domain.LoginRequest{
+			Username: "",
+			Password: password,
+		})
+		if !errors.Is(err, domain.ErrInvalidCredentials) {
+			t.Errorf("expected ErrInvalidCredentials, got: %v", err)
+		}
+	})
+
+	t.Run("Negative 2: wrong password provided", func(t *testing.T) {
+		repo := &mockUserRepo{
+			getUserByUsernameFunc: func(ctx context.Context, username string) (*domain.User, error) {
+				return validUser, nil
+			},
+		}
+		svc := NewAuthService(repo, cfg)
+		_, err := svc.Login(context.Background(), domain.LoginRequest{
+			Username: "alice",
+			Password: "wrongpassword",
+		})
+		if !errors.Is(err, domain.ErrInvalidCredentials) {
+			t.Errorf("expected ErrInvalidCredentials, got: %v", err)
+		}
+	})
 }
