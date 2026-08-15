@@ -5,6 +5,10 @@ build-and-run:
 	docker compose down --remove-orphans
 	docker compose up --build -d
 
+run:
+	docker compose down --remove-orphans
+	docker compose up -d
+
 # ── Unit tests ────────────────────────────────────────────────────────────────
 test-unit:
 	go test -race -v -count=1 ./internal/handler/... ./internal/service/... ./internal/repository/...
