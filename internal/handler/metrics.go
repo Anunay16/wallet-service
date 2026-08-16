@@ -17,6 +17,7 @@ func NewMetricsHandler() *MetricsHandler {
 	collector := metrics.GetCollector()
 	promHTTP := promhttp.HandlerFor(collector.Registry(), promhttp.HandlerOpts{
 		EnableOpenMetrics: true,
+		ErrorHandling:     promhttp.ContinueOnError,
 	})
 	fastHTTPHandler := fasthttpadaptor.NewFastHTTPHandler(promHTTP)
 	return &MetricsHandler{
