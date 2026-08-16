@@ -112,7 +112,7 @@ func TestNewLoggerMiddleware(t *testing.T) {
 
 func TestCorrelationIDFromContext(t *testing.T) {
 	t.Run("Nil context returns empty string", func(t *testing.T) {
-		if cid := CorrelationIDFromContext(nil); cid != "" {
+		if cid := CorrelationIDFromContext(nil); cid != "" { //nolint:staticcheck // testing nil context edge case
 			t.Errorf("expected empty string for nil context, got %s", cid)
 		}
 	})

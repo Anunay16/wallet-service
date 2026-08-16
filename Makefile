@@ -13,9 +13,12 @@ run-clean:
 	docker compose down --remove-orphans -v
 	docker compose up --build -d
 
+lint:
+	golangci-lint run
+
 # ── Unit tests ────────────────────────────────────────────────────────────────
 test-unit:
-	go test -race -v -count=1 ./internal/handler/... ./internal/service/... ./internal/repository/...
+	go test -race -v -count=1 $$(go list ./... | grep -v /e2e)
 
 # ── E2E test database ────────────────────────────────────────────────────────
 # Starts an ephemeral Postgres on port 5433 (no volume, tmpfs only).

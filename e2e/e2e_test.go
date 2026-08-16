@@ -69,7 +69,7 @@ func jsonRequest(t *testing.T, method, url string, body any, token string) *http
 
 func decodeJSON(t *testing.T, resp *http.Response, wantStatus int, dst any) {
 	t.Helper()
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("read body: %v", err)
@@ -86,7 +86,7 @@ func decodeJSON(t *testing.T, resp *http.Response, wantStatus int, dst any) {
 
 func rawDecode(t *testing.T, resp *http.Response) (int, []byte) {
 	t.Helper()
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("read body: %v", err)

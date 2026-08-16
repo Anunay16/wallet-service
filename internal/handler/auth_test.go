@@ -44,7 +44,7 @@ func TestNewAuthHandler(t *testing.T) {
 	t.Run("Negative 1: nil service dependency", func(t *testing.T) {
 		h := NewAuthHandler(nil)
 		if h == nil {
-			t.Errorf("expected struct instance even with nil dependency")
+			t.Fatalf("expected struct instance even with nil dependency")
 		}
 		if h.authService != nil {
 			t.Errorf("expected nil authService")

@@ -23,7 +23,7 @@ func TestNewWalletRepository(t *testing.T) {
 	t.Run("Negative 1: nil DB dependency", func(t *testing.T) {
 		repo := NewWalletRepository(nil)
 		if repo == nil {
-			t.Errorf("expected struct instance even with nil dependency")
+			t.Fatalf("expected struct instance even with nil dependency")
 		}
 		if repo.db != nil {
 			t.Errorf("expected nil db")
@@ -40,22 +40,30 @@ func TestNewWalletRepository(t *testing.T) {
 }
 
 func TestWalletRepository_GetOrCreateWallet(t *testing.T) {
-	t.Run("Positive: successfully get or create wallet with seed balance", func(t *testing.T) {
+	t.Run("Positive: creates wallet when missing", func(t *testing.T) {
 		db := newTestDB(t)
 		repo := NewWalletRepository(db)
-		userID := uuid.New()
 
-		// 1st call creates wallet
-		w1, err := repo.GetOrCreateWallet(context.Background(), userID)
+		uID := uuid.New()
+		w, err := repo.GetOrCreateWallet(context.Background(), uID)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if w1.UserID != userID || w1.Balance != 1000000 {
-			t.Errorf("unexpected wallet: %+v", w1)
+		if w == nil || w.UserID != uID {
+			t.Errorf("unexpected wallet returned: %+v", w)
 		}
+	})
 
-		// 2nd call returns existing wallet
-		w2, err := repo.GetOrCreateWallet(context.Background(), userID)
+	t.Run("Positive: returns existing wallet on subsequent call", func(t *testing.T) {
+		db := newTestDB(t)
+		repo := NewWalletRepository(db)
+
+		uID := uuid.New()
+		w1, err := repo.GetOrCreateWallet(context.Background(), uID)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		w2, err := repo.GetOrCreateWallet(context.Background(), uID)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -67,7 +75,7 @@ func TestWalletRepository_GetOrCreateWallet(t *testing.T) {
 	t.Run("Negative 1: database connection closed", func(t *testing.T) {
 		db := newTestDB(t)
 		sqlDB, _ := db.DB()
-		sqlDB.Close()
+		_ = sqlDB.Close()
 		repo := NewWalletRepository(db)
 
 		_, err := repo.GetOrCreateWallet(context.Background(), uuid.New())

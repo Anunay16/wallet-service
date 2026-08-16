@@ -53,7 +53,7 @@ func TestNewAuthService(t *testing.T) {
 		cfg := config.AuthConfig{JWTSecret: "secret"}
 		svc := NewAuthService(nil, cfg)
 		if svc == nil {
-			t.Errorf("expected non-nil struct instance")
+			t.Fatalf("expected non-nil struct instance")
 		}
 		if svc.userRepo != nil {
 			t.Errorf("expected nil userRepo")
@@ -64,7 +64,7 @@ func TestNewAuthService(t *testing.T) {
 		repo := &mockUserRepo{}
 		svc := NewAuthService(repo, config.AuthConfig{})
 		if svc == nil {
-			t.Errorf("expected non-nil AuthService")
+			t.Fatalf("expected non-nil AuthService")
 		}
 		if svc.cfg.JWTSecret != "" {
 			t.Errorf("expected empty JWTSecret")

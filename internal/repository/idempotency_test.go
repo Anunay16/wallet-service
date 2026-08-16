@@ -23,7 +23,7 @@ func TestNewIdempotencyRepository(t *testing.T) {
 	t.Run("Negative 1: nil DB dependency", func(t *testing.T) {
 		repo := NewIdempotencyRepository(nil)
 		if repo == nil {
-			t.Errorf("expected struct instance even with nil dependency")
+			t.Fatalf("expected struct instance even with nil dependency")
 		}
 		if repo.db != nil {
 			t.Errorf("expected nil db")
@@ -123,7 +123,7 @@ func TestIdempotencyRepository_Save(t *testing.T) {
 	t.Run("Negative 1: database connection closed error", func(t *testing.T) {
 		db := newTestDB(t)
 		sqlDB, _ := db.DB()
-		sqlDB.Close()
+		_ = sqlDB.Close()
 		repo := NewIdempotencyRepository(db)
 
 		rec := &domain.IdempotencyRecord{

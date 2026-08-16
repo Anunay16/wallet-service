@@ -24,7 +24,7 @@ func TestNewHealthHandler(t *testing.T) {
 	t.Run("Negative 1: nil DB dependency", func(t *testing.T) {
 		h := NewHealthHandler(nil)
 		if h == nil {
-			t.Errorf("expected struct instance even with nil dependency")
+			t.Fatalf("expected struct instance even with nil dependency")
 		}
 		if h.db != nil {
 			t.Errorf("expected nil db")
@@ -69,7 +69,7 @@ func TestHealthHandler_HealthCheck(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to get sqlDB: %v", err)
 		}
-		sqlDB.Close()
+		_ = sqlDB.Close()
 
 		app := fiber.New()
 		h := NewHealthHandler(db)

@@ -34,7 +34,7 @@ func RunMigrations(dsn string, log *zap.Logger) error {
 	if err != nil {
 		return fmt.Errorf("failed to open database connection for migrations: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := goose.Up(db, "."); err != nil {
 		return fmt.Errorf("failed to apply migrations: %w", err)

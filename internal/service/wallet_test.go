@@ -40,7 +40,7 @@ func TestNewWalletService(t *testing.T) {
 	t.Run("Negative 1: nil walletRepo dependency", func(t *testing.T) {
 		svc := NewWalletService(nil, &mockUserRepo{})
 		if svc == nil {
-			t.Errorf("expected non-nil struct instance")
+			t.Fatalf("expected non-nil struct instance")
 		}
 		if svc.walletRepo != nil {
 			t.Errorf("expected nil walletRepo")
@@ -50,7 +50,7 @@ func TestNewWalletService(t *testing.T) {
 	t.Run("Negative 2: nil userRepo dependency", func(t *testing.T) {
 		svc := NewWalletService(&mockWalletRepo{}, nil)
 		if svc == nil {
-			t.Errorf("expected non-nil struct instance")
+			t.Fatalf("expected non-nil struct instance")
 		}
 		if svc.userRepo != nil {
 			t.Errorf("expected nil userRepo")

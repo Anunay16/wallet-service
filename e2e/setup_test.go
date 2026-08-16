@@ -147,7 +147,7 @@ func bootServer() (port string, cleanup func()) {
 			log.Printf("[e2e] shutdown error: %v", err)
 		}
 		if sqlDB, err := gormDB.DB(); err == nil {
-			sqlDB.Close()
+			_ = sqlDB.Close()
 		}
 	}
 	return port, cleanup
@@ -159,7 +159,7 @@ func freePort() string {
 	if err != nil {
 		log.Fatalf("freePort: %v", err)
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 	return fmt.Sprintf("%d", l.Addr().(*net.TCPAddr).Port)
 }
 
@@ -169,7 +169,7 @@ func waitForPort(port string, timeout time.Duration) {
 	for time.Now().Before(deadline) {
 		conn, err := net.DialTimeout("tcp", "127.0.0.1:"+port, 200*time.Millisecond)
 		if err == nil {
-			conn.Close()
+			_ = conn.Close()
 			return
 		}
 		time.Sleep(100 * time.Millisecond)

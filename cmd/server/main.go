@@ -28,7 +28,7 @@ func main() {
 		fmt.Printf("Failed to initialize zap logger: %v\n", err)
 		os.Exit(1)
 	}
-	defer log.Sync()
+	defer func() { _ = log.Sync() }()
 
 	log.Info("Starting Wallet Service...", zap.String("port", cfg.Server.Port), zap.String("log_level", cfg.Log.Level))
 
@@ -40,7 +40,7 @@ func main() {
 	}
 	sqlDB, _ := gormDB.DB()
 	if sqlDB != nil {
-		defer sqlDB.Close()
+		defer func() { _ = sqlDB.Close() }()
 	}
 	log.Info("GORM database connection established", zap.String("host", cfg.Database.Host), zap.String("db", cfg.Database.Name))
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -48,8 +49,8 @@ func GetCollector() *Metrics {
 		reg := prometheus.NewRegistry()
 
 		// System Go & Process metrics
-		reg.MustRegister(prometheus.NewGoCollector())
-		reg.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+		reg.MustRegister(collectors.NewGoCollector())
+		reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 
 		httpReqTotal := prometheus.NewCounterVec(
 			prometheus.CounterOpts{

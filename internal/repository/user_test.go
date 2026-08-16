@@ -23,7 +23,7 @@ func TestNewUserRepository(t *testing.T) {
 	t.Run("Negative 1: nil DB dependency", func(t *testing.T) {
 		repo := NewUserRepository(nil)
 		if repo == nil {
-			t.Errorf("expected struct instance even with nil dependency")
+			t.Fatalf("expected struct instance even with nil dependency")
 		}
 		if repo.db != nil {
 			t.Errorf("expected nil db")

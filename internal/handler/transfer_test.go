@@ -44,7 +44,7 @@ func TestNewTransferHandler(t *testing.T) {
 	t.Run("Negative 1: nil transfer service dependency", func(t *testing.T) {
 		h := NewTransferHandler(nil)
 		if h == nil {
-			t.Errorf("expected struct instance even with nil dependency")
+			t.Fatalf("expected struct instance even with nil dependency")
 		}
 		if h.transferService != nil {
 			t.Errorf("expected nil transferService")

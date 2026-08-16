@@ -89,7 +89,7 @@ func TestNewTransferService(t *testing.T) {
 	t.Run("Negative 1: nil transferRepo dependency", func(t *testing.T) {
 		svc := NewTransferService(nil, &mockTransferUserRepo{}, &mockTransferWalletRepo{}, &mockIdempotencyRepo{})
 		if svc == nil {
-			t.Errorf("expected non-nil struct instance")
+			t.Fatalf("expected non-nil struct instance")
 		}
 		if svc.transferRepo != nil {
 			t.Errorf("expected nil transferRepo")
@@ -99,7 +99,7 @@ func TestNewTransferService(t *testing.T) {
 	t.Run("Negative 2: nil userRepo dependency", func(t *testing.T) {
 		svc := NewTransferService(&mockTransferRepo{}, nil, &mockTransferWalletRepo{}, &mockIdempotencyRepo{})
 		if svc == nil {
-			t.Errorf("expected non-nil struct instance")
+			t.Fatalf("expected non-nil struct instance")
 		}
 		if svc.userRepo != nil {
 			t.Errorf("expected nil userRepo")

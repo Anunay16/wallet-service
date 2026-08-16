@@ -43,7 +43,7 @@ func TestNewWalletHandler(t *testing.T) {
 	t.Run("Negative 1: nil wallet service dependency", func(t *testing.T) {
 		h := NewWalletHandler(nil)
 		if h == nil {
-			t.Errorf("expected struct instance even with nil dependency")
+			t.Fatalf("expected struct instance even with nil dependency")
 		}
 		if h.walletService != nil {
 			t.Errorf("expected nil walletService")
