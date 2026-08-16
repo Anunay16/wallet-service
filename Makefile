@@ -9,6 +9,10 @@ run:
 	docker compose down --remove-orphans
 	docker compose up -d
 
+run-clean:
+	docker compose down --remove-orphans -v
+	docker compose up --build -d
+
 # ── Unit tests ────────────────────────────────────────────────────────────────
 test-unit:
 	go test -race -v -count=1 ./internal/handler/... ./internal/service/... ./internal/repository/...
@@ -39,6 +43,8 @@ test-e2e: test-e2e-db-up
 #
 #   make test-e2e-remote BASE_URL=https://<your-app>.onrender.com
 #   make test-e2e-remote BASE_URL=https://<your-app>.onrender.com RUN=TestConservation
+#
+#   make test-e2e-remote BASE_URL=http://localhost:8080
 #
 # Pre-warm the Render instance first to avoid cold-start timeouts:
 #   curl -sf https://<your-app>.onrender.com/health

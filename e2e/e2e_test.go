@@ -555,15 +555,18 @@ func TestExactlyOnce(t *testing.T) {
 		wg.Wait()
 
 		transferIDs := map[string]bool{}
-		for _, r := range results {
+		for i, r := range results {
+			if r.status != http.StatusOK && r.status != http.StatusCreated {
+				t.Errorf("goroutine %d: expected 200/201 response for concurrent idempotency key, got status %d", i, r.status)
+			}
 			if r.id != "" {
 				transferIDs[r.id] = true
 			}
 		}
 		t.Logf("Concurrent same-key: unique transfer IDs=%v", transferIDs)
 
-		if len(transferIDs) > 1 {
-			t.Errorf("multiple distinct transfer IDs for same idempotency key: %v", transferIDs)
+		if len(transferIDs) != 1 {
+			t.Errorf("expected exactly 1 distinct transfer ID for same idempotency key, got: %v", transferIDs)
 		}
 
 		aliceAfter := getWalletBalance(t, aliceTok, aliceWallet)
