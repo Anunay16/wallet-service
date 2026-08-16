@@ -1,7 +1,11 @@
 package e2e
 
-// TestMain wires an in-process instance of the wallet service against a
-// dedicated test database (wallet_postgres_test container, port 5433).
+// TestMain controls how the e2e suite is wired up. It supports two modes:
+//
+// # Local mode (default)
+//
+// An in-process Fiber server is booted against a dedicated Docker test
+// database (wallet_postgres_test container, port 5433).
 //
 // Lifecycle:
 //  1. Connect to Postgres and run all Goose migrations.
@@ -14,6 +18,14 @@ package e2e
 //
 //	E2E_DSN=postgres://... go test ./e2e/... -v
 //	E2E_PORT=9090         go test ./e2e/... -v
+//
+// # Remote mode
+//
+// When BASE_URL is set in the environment before the test run, TestMain
+// skips starting a local server and a local database entirely.  All tests
+// fire real HTTP requests at the specified URL.
+//
+//	BASE_URL=https://<your-app>.onrender.com go test ./e2e/... -v -timeout 300s
 
 import (
 	"fmt"
@@ -34,11 +46,16 @@ import (
 var testServerPort string
 
 func TestMain(m *testing.M) {
+	// Remote mode: BASE_URL is already set — skip local infrastructure entirely.
+	if remoteURL := os.Getenv("BASE_URL"); remoteURL != "" {
+		log.Printf("[e2e] remote mode: running tests against %s", remoteURL)
+		os.Exit(m.Run())
+	}
+
+	// Local mode: boot an in-process server and set BASE_URL for test helpers.
 	port, cleanup := bootServer()
 	testServerPort = port
 
-	// Override baseURL() resolution for all tests in this package.
-	// The e2e_test.go helper reads BASE_URL from the environment; set it now.
 	if err := os.Setenv("BASE_URL", "http://localhost:"+port); err != nil {
 		log.Fatalf("setenv BASE_URL: %v", err)
 	}
