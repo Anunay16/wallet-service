@@ -56,6 +56,9 @@ func NewAuthMiddleware(jwtSecret string) fiber.Handler {
 }
 
 func GetUserID(c *fiber.Ctx) (uuid.UUID, bool) {
+	if c == nil {
+		return uuid.Nil, false
+	}
 	val := c.Locals("user_id")
 	if val == nil {
 		return uuid.Nil, false

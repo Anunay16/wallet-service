@@ -45,6 +45,7 @@ func InitializeServer(gormDB *gorm.DB, cfg *config.Config, log *zap.Logger) *Ser
 	})
 
 	// Middlewares
+	app.Use(middleware.NewRecoveryMiddleware(log))
 	app.Use(cors.New())
 	app.Use(middleware.NewLoggerMiddleware(log))
 

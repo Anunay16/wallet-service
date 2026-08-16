@@ -43,4 +43,3 @@ func RunMigrations(dsn string, log *zap.Logger) error {
 	log.Info("Database migrations applied successfully")
 	return nil
 }
-

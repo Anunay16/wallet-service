@@ -19,9 +19,9 @@ type Metrics struct {
 	httpRequestsTotal       *prometheus.CounterVec
 	httpRequestDurationSecs *prometheus.HistogramVec
 
-	transfersCreatedTotal                  prometheus.Counter
+	transfersCreatedTotal                   prometheus.Counter
 	transfersDeclinedInsufficientFundsTotal prometheus.Counter
-	idempotentReplaysTotal                 prometheus.Counter
+	idempotentReplaysTotal                  prometheus.Counter
 
 	// Snapshot tracking for RPS, P99, error rates & JSON dashboard endpoint
 	totalRequests uint64
@@ -96,14 +96,14 @@ func GetCollector() *Metrics {
 		reg.MustRegister(idempotentReplays)
 
 		globalMetrics = &Metrics{
-			registry:                               reg,
-			httpRequestsTotal:                      httpReqTotal,
-			httpRequestDurationSecs:                httpReqDuration,
-			transfersCreatedTotal:                  transfersCreated,
+			registry:                                reg,
+			httpRequestsTotal:                       httpReqTotal,
+			httpRequestDurationSecs:                 httpReqDuration,
+			transfersCreatedTotal:                   transfersCreated,
 			transfersDeclinedInsufficientFundsTotal: declinedFunds,
-			idempotentReplaysTotal:                 idempotentReplays,
-			latencies:                              make([]float64, 0, 1000),
-			requestTimestamps:                      make([]time.Time, 0, 1000),
+			idempotentReplaysTotal:                  idempotentReplays,
+			latencies:                               make([]float64, 0, 1000),
+			requestTimestamps:                       make([]time.Time, 0, 1000),
 		}
 	})
 	return globalMetrics
