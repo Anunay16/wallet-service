@@ -28,13 +28,14 @@ func InitializeServer(gormDB *gorm.DB, cfg *config.Config, log *zap.Logger) *Ser
 	// 2. Instantiate Services
 	authSvc := service.NewAuthService(userRepo, cfg.Auth)
 	walletSvc := service.NewWalletService(walletRepo, userRepo)
-	transferSvc := service.NewTransferService(transferRepo, userRepo, walletRepo, idempotencyRepo)
+	transferSvc := service.NewTransferService(transferRepo, userRepo, walletRepo, idempotencyRepo, service.WithLogger(log))
 
 	// 3. Instantiate Handlers
 	healthHdlr := handler.NewHealthHandler(gormDB)
-	authHdlr := handler.NewAuthHandler(authSvc)
-	walletHdlr := handler.NewWalletHandler(walletSvc)
-	transferHdlr := handler.NewTransferHandler(transferSvc)
+	metricsHdlr := handler.NewMetricsHandler()
+	authHdlr := handler.NewAuthHandler(authSvc, handler.WithAuthHandlerLogger(log))
+	walletHdlr := handler.NewWalletHandler(walletSvc, handler.WithWalletHandlerLogger(log))
+	transferHdlr := handler.NewTransferHandler(transferSvc, handler.WithTransferHandlerLogger(log))
 
 	// 4. Create Fiber App
 	app := fiber.New(fiber.Config{
@@ -52,6 +53,7 @@ func InitializeServer(gormDB *gorm.DB, cfg *config.Config, log *zap.Logger) *Ser
 
 	// Public routes
 	app.Get("/health", healthHdlr.HealthCheck)
+	app.Get("/metrics", metricsHdlr.GetMetrics)
 	app.Post("/auth/register", authHdlr.Register)
 	app.Post("/auth/login", authHdlr.Login)
 

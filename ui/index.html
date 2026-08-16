@@ -43,7 +43,7 @@
 
     .container {
       width: 100%;
-      max-width: 900px;
+      max-width: 950px;
     }
 
     header {
@@ -71,7 +71,7 @@
       border-radius: var(--radius);
       padding: 1rem 1.5rem;
       display: flex;
-      justify-content: space-between;
+      justify-space: space-between;
       align-items: center;
       margin-bottom: 2rem;
     }
@@ -99,6 +99,7 @@
       gap: 0.5rem;
       border-bottom: 1px solid var(--border-color);
       margin-bottom: 2rem;
+      overflow-x: auto;
     }
 
     .tab-btn {
@@ -111,6 +112,7 @@
       cursor: pointer;
       border-bottom: 2px solid transparent;
       transition: all 0.2s ease;
+      white-space: nowrap;
     }
 
     .tab-btn:hover {
@@ -249,19 +251,6 @@
       max-height: 250px;
       overflow-y: auto;
     }
-
-    .badge {
-      display: inline-block;
-      padding: 0.25rem 0.6rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .badge-completed { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-    .badge-declined { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-    .badge-pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
   </style>
 </head>
 <body>
@@ -285,6 +274,7 @@
       <button class="tab-btn" data-tab="wallet-tab">My Wallet</button>
       <button class="tab-btn" data-tab="transfer-tab">Transfer Funds</button>
       <button class="tab-btn" data-tab="status-tab">Transfer Status</button>
+      <button class="tab-btn" data-tab="metrics-tab">Metrics Dashboard</button>
     </div>
 
     <!-- AUTH TAB -->
@@ -382,6 +372,61 @@
       </div>
     </div>
 
+    <!-- METRICS TAB -->
+    <div id="metrics-tab" class="tab-content">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <div>
+            <h2>System & Domain Metrics</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Real-time latency, request rates, error ratios, and domain event counters.</p>
+          </div>
+          <button id="refresh-metrics-btn" class="btn btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.85rem;">🔄 Refresh</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem;">
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Request Rate</div>
+            <div id="metric-rps" style="font-size: 1.6rem; font-weight: 700; color: #818cf8; font-family: 'JetBrains Mono', monospace;">0.00 RPS</div>
+          </div>
+
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">P99 Latency</div>
+            <div id="metric-p99" style="font-size: 1.6rem; font-weight: 700; color: #34d399; font-family: 'JetBrains Mono', monospace;">0 ms</div>
+          </div>
+
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">4xx Client Errors</div>
+            <div id="metric-4xx" style="font-size: 1.6rem; font-weight: 700; color: #fbbf24; font-family: 'JetBrains Mono', monospace;">0 (0.0%)</div>
+          </div>
+
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">5xx Server Errors</div>
+            <div id="metric-5xx" style="font-size: 1.6rem; font-weight: 700; color: #ef4444; font-family: 'JetBrains Mono', monospace;">0 (0.0%)</div>
+          </div>
+
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Transfers Created</div>
+            <div id="metric-transfers-created" style="font-size: 1.6rem; font-weight: 700; color: #60a5fa; font-family: 'JetBrains Mono', monospace;">0</div>
+          </div>
+
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Declined (Overdrafts)</div>
+            <div id="metric-declined" style="font-size: 1.6rem; font-weight: 700; color: #f87171; font-family: 'JetBrains Mono', monospace;">0</div>
+          </div>
+
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem; text-align: center;">
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">Idempotent Replays</div>
+            <div id="metric-replays" style="font-size: 1.6rem; font-weight: 700; color: #c084fc; font-family: 'JetBrains Mono', monospace;">0</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 1.5rem;">
+          <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Raw Prometheus Metric Output (<a href="/metrics" target="_blank" style="color: var(--accent-primary);">/metrics</a>)</div>
+          <div id="metrics-raw-output" class="response-box">Loading metrics...</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <script>
@@ -429,8 +474,40 @@
         document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById(btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'metrics-tab') {
+          fetchMetrics();
+        }
       });
     });
+
+    // Metrics fetching logic
+    async function fetchMetrics() {
+      try {
+        const res = await fetch('/metrics?format=json');
+        if (!res.ok) return;
+        const data = await res.json();
+        document.getElementById('metric-rps').textContent = `${(data.request_rate_rps || 0).toFixed(2)} RPS`;
+        document.getElementById('metric-p99').textContent = `${(data.latency_p99_ms || 0).toFixed(1)} ms`;
+        document.getElementById('metric-4xx').textContent = `${data.status_4xx_count || 0} (${(data.error_rate_4xx_percent || 0).toFixed(1)}%)`;
+        document.getElementById('metric-5xx').textContent = `${data.status_5xx_count || 0} (${(data.error_rate_5xx_percent || 0).toFixed(1)}%)`;
+        document.getElementById('metric-transfers-created').textContent = data.transfers_created || 0;
+        document.getElementById('metric-declined').textContent = data.declined_insufficient_funds || 0;
+        document.getElementById('metric-replays').textContent = data.idempotent_replays || 0;
+
+        const promRes = await fetch('/metrics');
+        const promText = await promRes.text();
+        document.getElementById('metrics-raw-output').textContent = promText;
+      } catch (err) {
+        console.error('Failed to fetch metrics:', err);
+      }
+    }
+
+    document.getElementById('refresh-metrics-btn').addEventListener('click', fetchMetrics);
+    setInterval(() => {
+      if (document.getElementById('metrics-tab').classList.contains('active')) {
+        fetchMetrics();
+      }
+    }, 5000);
 
     // Register Form
     document.getElementById('register-form').addEventListener('submit', async (e) => {

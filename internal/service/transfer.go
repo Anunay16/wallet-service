@@ -9,7 +9,10 @@ import (
 	"strings"
 
 	"github.com/anunay/wallet-service/internal/domain"
+	"github.com/anunay/wallet-service/internal/metrics"
+	"github.com/anunay/wallet-service/internal/middleware"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type transferRepo interface {
@@ -36,6 +39,17 @@ type TransferService struct {
 	userRepo        transferUserRepo
 	walletRepo      transferWalletRepo
 	idempotencyRepo idempotencyRepo
+	log             *zap.Logger
+}
+
+type TransferServiceOption func(*TransferService)
+
+func WithLogger(log *zap.Logger) TransferServiceOption {
+	return func(s *TransferService) {
+		if log != nil {
+			s.log = log
+		}
+	}
 }
 
 func NewTransferService(
@@ -43,13 +57,19 @@ func NewTransferService(
 	userRepo transferUserRepo,
 	walletRepo transferWalletRepo,
 	idempotencyRepo idempotencyRepo,
+	opts ...TransferServiceOption,
 ) *TransferService {
-	return &TransferService{
+	s := &TransferService{
 		transferRepo:    transferRepo,
 		userRepo:        userRepo,
 		walletRepo:      walletRepo,
 		idempotencyRepo: idempotencyRepo,
+		log:             zap.NewNop(),
 	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
 }
 
 func (s *TransferService) InitiateTransfer(
@@ -57,6 +77,7 @@ func (s *TransferService) InitiateTransfer(
 	req domain.TransferRequest,
 	callerUserID uuid.UUID,
 ) (*domain.IdempotencyRecord, error) {
+	cid := middleware.CorrelationIDFromContext(ctx)
 	req.From = strings.TrimSpace(req.From)
 	req.To = strings.TrimSpace(req.To)
 	req.IdempotencyKey = strings.TrimSpace(req.IdempotencyKey)
@@ -64,6 +85,11 @@ func (s *TransferService) InitiateTransfer(
 	// Fetch caller user to get their username
 	callerUser, err := s.userRepo.GetUserByID(ctx, callerUserID)
 	if err != nil {
+		s.log.Error("InitiateTransfer failed to fetch caller user",
+			zap.Error(err),
+			zap.String("correlation_id", cid),
+			zap.String("caller_user_id", callerUserID.String()),
+		)
 		return nil, fmt.Errorf("failed to fetch caller user: %w", err)
 	}
 
@@ -92,6 +118,11 @@ func (s *TransferService) InitiateTransfer(
 		if errors.Is(err, domain.ErrUserNotFound) {
 			return nil, domain.ErrWalletNotFound
 		}
+		s.log.Error("InitiateTransfer failed to lookup destination user",
+			zap.Error(err),
+			zap.String("correlation_id", cid),
+			zap.String("to_username", req.To),
+		)
 		return nil, fmt.Errorf("failed to lookup destination user: %w", err)
 	}
 
@@ -101,6 +132,11 @@ func (s *TransferService) InitiateTransfer(
 	// Idempotency lookup
 	existing, err := s.idempotencyRepo.Get(ctx, req.IdempotencyKey, callerUserID)
 	if err != nil {
+		s.log.Error("InitiateTransfer idempotency lookup failed",
+			zap.Error(err),
+			zap.String("correlation_id", cid),
+			zap.String("idempotency_key", req.IdempotencyKey),
+		)
 		return nil, fmt.Errorf("idempotency check failed: %w", err)
 	}
 
@@ -108,16 +144,72 @@ func (s *TransferService) InitiateTransfer(
 		if existing.RequestHash != reqHash {
 			return nil, domain.ErrIdempotencyConflict
 		}
+		// Record metric and emit structured domain event
+		metrics.GetCollector().IncIdempotentReplays()
+		s.log.Info("Domain Event: idempotent_replay_hit",
+			zap.String("event", "idempotent_replay_hit"),
+			zap.String("correlation_id", cid),
+			zap.String("idempotency_key", req.IdempotencyKey),
+			zap.String("user_id", callerUserID.String()),
+			zap.Int("response_status", existing.ResponseStatus),
+		)
 		// Return cached idempotency record (200 OK replay)
 		return existing, nil
 	}
 
+	// Domain event: transfer_created
+	metrics.GetCollector().IncTransfersCreated()
+	s.log.Info("Domain Event: transfer_created",
+		zap.String("event", "transfer_created"),
+		zap.String("correlation_id", cid),
+		zap.String("from_user", req.From),
+		zap.String("to_user", req.To),
+		zap.Int64("amount", req.Amount),
+		zap.String("idempotency_key", req.IdempotencyKey),
+	)
+
 	// Execute atomic transfer (locks rows in ascending order, updates balances, saves transfer + idempotency)
-	_, idemRecord, err := s.transferRepo.ExecuteAtomicTransfer(ctx, req, callerUser.ID, toUser.ID, callerUserID, reqHash)
+	transferRecord, idemRecord, err := s.transferRepo.ExecuteAtomicTransfer(ctx, req, callerUser.ID, toUser.ID, callerUserID, reqHash)
+
+	if errors.Is(err, domain.ErrInsufficientFunds) {
+		metrics.GetCollector().IncDeclinedInsufficientFunds()
+		s.log.Warn("Domain Event: declined",
+			zap.String("event", "declined"),
+			zap.String("correlation_id", cid),
+			zap.String("reason", "insufficient_funds"),
+			zap.String("from_user", req.From),
+			zap.String("to_user", req.To),
+			zap.Int64("amount", req.Amount),
+			zap.String("idempotency_key", req.IdempotencyKey),
+		)
+	} else if err != nil {
+		s.log.Error("InitiateTransfer atomic execution failed",
+			zap.Error(err),
+			zap.String("correlation_id", cid),
+			zap.String("from_user", req.From),
+			zap.String("to_user", req.To),
+		)
+	} else if idemRecord != nil {
+		// Log debited & credited domain events
+		s.log.Info("Domain Event: debited",
+			zap.String("event", "debited"),
+			zap.String("correlation_id", cid),
+			zap.String("from_user", req.From),
+			zap.Int64("amount", req.Amount),
+		)
+		s.log.Info("Domain Event: credited",
+			zap.String("event", "credited"),
+			zap.String("correlation_id", cid),
+			zap.String("to_user", req.To),
+			zap.Int64("amount", req.Amount),
+		)
+	}
+
 	if err != nil && idemRecord == nil {
 		return nil, err
 	}
 
+	_ = transferRecord
 	return idemRecord, err
 }
 
@@ -128,6 +220,14 @@ func (s *TransferService) GetTransferByID(
 ) (*domain.Transfer, error) {
 	t, err := s.transferRepo.GetByID(ctx, transferID)
 	if err != nil {
+		if !errors.Is(err, domain.ErrTransferNotFound) {
+			cid := middleware.CorrelationIDFromContext(ctx)
+			s.log.Error("GetTransferByID repository call failed",
+				zap.Error(err),
+				zap.String("correlation_id", cid),
+				zap.String("transfer_id", transferID.String()),
+			)
+		}
 		return nil, err
 	}
 

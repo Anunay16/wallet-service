@@ -130,6 +130,40 @@ func TestTransferRepository_ExecuteAtomicTransfer(t *testing.T) {
 		}
 	})
 
+	t.Run("Positive: duplicate idempotency key fallback returns committed record", func(t *testing.T) {
+		db := newTestDB(t)
+		repo := NewTransferRepository(db)
+
+		fromUserID := uuid.New()
+		toUserID := uuid.New()
+		fromWallet := &domain.Wallet{ID: uuid.New(), UserID: fromUserID, Balance: 10000}
+		toWallet := &domain.Wallet{ID: uuid.New(), UserID: toUserID, Balance: 2000}
+		db.Create(fromWallet)
+		db.Create(toWallet)
+
+		req := domain.TransferRequest{
+			From:           "alice",
+			To:             "bob",
+			Amount:         1000,
+			IdempotencyKey: "idem-dup-key",
+		}
+
+		// First atomic transfer succeeds
+		_, idem1, err1 := repo.ExecuteAtomicTransfer(context.Background(), req, fromUserID, toUserID, fromUserID, "hash-dup")
+		if err1 != nil {
+			t.Fatalf("first transfer failed: %v", err1)
+		}
+
+		// Second call with same key directly triggering duplicate key fallback path
+		_, idem2, err2 := repo.ExecuteAtomicTransfer(context.Background(), req, fromUserID, toUserID, fromUserID, "hash-dup")
+		if err2 != nil {
+			t.Fatalf("duplicate key fallback failed: %v", err2)
+		}
+		if idem2 == nil || idem2.IdempotencyKey != idem1.IdempotencyKey {
+			t.Errorf("expected cached idempotency record returned on duplicate key conflict")
+		}
+	})
+
 	t.Run("Negative 1: insufficient funds causes declined transfer and idempotency record", func(t *testing.T) {
 		db := newTestDB(t)
 		repo := NewTransferRepository(db)

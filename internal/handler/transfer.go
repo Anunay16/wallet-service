@@ -9,6 +9,7 @@ import (
 	"github.com/anunay/wallet-service/internal/middleware"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type transferService interface {
@@ -18,13 +19,32 @@ type transferService interface {
 
 type TransferHandler struct {
 	transferService transferService
+	log             *zap.Logger
 }
 
-func NewTransferHandler(transferService transferService) *TransferHandler {
-	return &TransferHandler{transferService: transferService}
+type TransferHandlerOption func(*TransferHandler)
+
+func WithTransferHandlerLogger(log *zap.Logger) TransferHandlerOption {
+	return func(h *TransferHandler) {
+		if log != nil {
+			h.log = log
+		}
+	}
+}
+
+func NewTransferHandler(transferService transferService, opts ...TransferHandlerOption) *TransferHandler {
+	h := &TransferHandler{
+		transferService: transferService,
+		log:             zap.NewNop(),
+	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 func (h *TransferHandler) InitiateTransfer(c *fiber.Ctx) error {
+	cid := middleware.GetCorrelationID(c)
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
@@ -54,6 +74,11 @@ func (h *TransferHandler) InitiateTransfer(c *fiber.Ctx) error {
 			return c.Status(idemRecord.ResponseStatus).Send(idemRecord.ResponseBody)
 		}
 		if idemRecord == nil {
+			h.log.Error("InitiateTransfer internal error",
+				zap.Error(err),
+				zap.String("correlation_id", cid),
+				zap.String("user_id", userID.String()),
+			)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
 	}
@@ -63,10 +88,15 @@ func (h *TransferHandler) InitiateTransfer(c *fiber.Ctx) error {
 		return c.Status(idemRecord.ResponseStatus).Send(idemRecord.ResponseBody)
 	}
 
+	h.log.Error("InitiateTransfer unexpected state",
+		zap.String("correlation_id", cid),
+		zap.String("user_id", userID.String()),
+	)
 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "unexpected transfer state"})
 }
 
 func (h *TransferHandler) GetTransferByID(c *fiber.Ctx) error {
+	cid := middleware.GetCorrelationID(c)
 	userID, ok := middleware.GetUserID(c)
 	if !ok {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "unauthorized"})
@@ -86,6 +116,11 @@ func (h *TransferHandler) GetTransferByID(c *fiber.Ctx) error {
 		if errors.Is(err, domain.ErrForbiddenWalletAccess) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "forbidden"})
 		}
+		h.log.Error("GetTransferByID internal error",
+			zap.Error(err),
+			zap.String("correlation_id", cid),
+			zap.String("transfer_id", transferID.String()),
+		)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 

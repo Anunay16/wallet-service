@@ -181,6 +181,17 @@ func (r *TransferRepository) ExecuteAtomicTransfer(
 	})
 
 	if txErr != nil {
+		// Handle concurrent duplicate key insertion by looking up the committed idempotency record
+		errStr := strings.ToLower(txErr.Error())
+		if strings.Contains(errStr, "23505") || strings.Contains(errStr, "duplicate key") || strings.Contains(errStr, "unique constraint failed") {
+			var existingRecord domain.IdempotencyRecord
+			if lookupErr := r.db.WithContext(ctx).Where("idempotency_key = ? AND user_id = ?", req.IdempotencyKey, userID).First(&existingRecord).Error; lookupErr == nil {
+				if existingRecord.ResponseStatus == 402 {
+					return nil, &existingRecord, domain.ErrInsufficientFunds
+				}
+				return nil, &existingRecord, nil
+			}
+		}
 		return nil, nil, txErr
 	}
 
