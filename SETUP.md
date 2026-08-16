@@ -121,12 +121,18 @@ go test -race -v -count=1 ./internal/handler/... ./internal/service/... ./intern
 
 ## Running End-to-End (E2E) Tests
 
-E2E tests use an isolated, ephemeral PostgreSQL instance.
-
-To run the full E2E suite with one command:
+To run the full E2E suite locally with one command (boots test DB, runs migrations, executes tests, tears down DB):
 
 ```bash
 make test-e2e
 ```
+
+To run the E2E suite against the live remote deployment:
+
+```bash
+make test-e2e-remote BASE_URL=https://wallet-service-irkk.onrender.com
+```
+
+> ⚠️ **Note**: Running tests against the remote server populates the database with test records. On subsequent test runs, the remote database may contain stale test data from previous runs.
 
 For complete details on E2E test scenarios and isolated test runner execution, refer to [E2E_TESTING.md](./E2E_TESTING.md).

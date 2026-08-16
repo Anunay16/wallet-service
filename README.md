@@ -35,6 +35,26 @@ A high-performance, concurrent digital wallet microservice built in Go. The serv
 
 ---
 
+## 🧪 Quick Test Execution
+
+Running tests requires just **one command**:
+
+### Local E2E Suite (Ephemeral DB)
+Boots an ephemeral test database, applies migrations, runs all E2E tests, and tears down DB containers automatically:
+```bash
+make test-e2e
+```
+
+### Remote E2E Suite (Render Deployment)
+Runs the full E2E suite against the live remote service:
+```bash
+make test-e2e-remote BASE_URL=https://wallet-service-irkk.onrender.com
+```
+
+> ⚠️ **Database State Notice**: Once the remote E2E test suite is run, the remote database gets populated with test users and transactions. On the next run, the database may contain some stale data from previous test executions (each test run uses uniquely timestamped user accounts so tests do not interfere with each other).
+
+---
+
 ## 🔌 API Reference
 
 All protected endpoints require an `Authorization: Bearer <token>` HTTP header obtained via `/auth/login`.

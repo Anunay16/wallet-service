@@ -124,10 +124,21 @@ curl -sf https://wallet-service-irkk.onrender.com/health
 
 Wait for a `200 OK` before running tests.
 
-**Step 2 — Run the concurrency scenarios**
+**Step 2 — Run the remote E2E suite (One Command)**
+
+Run the entire E2E test suite against the remote service with a single command:
+
+```bash
+make test-e2e-remote BASE_URL=https://wallet-service-irkk.onrender.com
+```
+
+> ⚠️ **Database Persistence Notice**: Once `make test-e2e-remote BASE_URL=https://wallet-service-irkk.onrender.com` is executed, the remote database gets populated with generated test users, wallets, and transfers. In the next run, the database may contain some stale data from previous test executions. Since each test run generates uniquely timestamped usernames (`prefix_<nanosecond>`), prior test data will not cause key collisions or test failures.
+
+Or run individual concurrency scenarios:
 
 | Scenario | Command |
 |---|---|
+| Full E2E Test Suite | `make test-e2e-remote BASE_URL=https://wallet-service-irkk.onrender.com` |
 | Concurrent get-or-create | `make test-e2e-remote BASE_URL=https://wallet-service-irkk.onrender.com RUN=TestRaceFreeGetOrCreate` |
 | Idempotent retry storm | `make test-e2e-remote BASE_URL=https://wallet-service-irkk.onrender.com RUN=TestExactlyOnce` |
 | Conservation under contention | `make test-e2e-remote BASE_URL=https://wallet-service-irkk.onrender.com RUN=TestConservation` |
