@@ -215,3 +215,33 @@ A production-grade system requires robust security, observability, and testing s
 ### C. Testing Strategy
 - **Unit Testing (Mocking):** Business logic (e.g., transfer validation) is unit tested by injecting mock implementations of the Repository interfaces. This allows for fast, isolated execution without a database.
 - **Integration/E2E Testing (Ephemeral DBs):** Because our core logic relies on complex PostgreSQL features (row locks, constraints), mocking the DB is dangerous. We use `docker-compose.test.yml` to spin up an ephemeral, isolated PostgreSQL container, run migrations, execute real HTTP flows against the API, and tear down the container. This guarantees our locking logic actually works under concurrent load.
+
+---
+
+## 11. Current Implementation Flows & Critical Paths
+
+**Question:** 
+*Can you walk me through the specific lifecycle flows that are currently implemented in your wallet service, from a user signing up to completing a transfer?*
+
+**Expected Answer:**
+The application currently supports three primary flows, all exposed via REST HTTP endpoints:
+
+### Flow 1: User Registration & Authentication
+1. **Registration (`POST /auth/register`):** The client submits a username, email, and plaintext password. The Go application hashes the password using `bcrypt` and stores the user in PostgreSQL.
+2. **Login (`POST /auth/login`):** The client submits credentials. The application verifies the hash and generates a **stateless JWT (JSON Web Token)** using the `HS256` algorithm. This token is returned to the client and must be passed as a `Bearer` token in the `Authorization` header for all subsequent protected routes.
+
+### Flow 2: Wallet Provisioning (Get-or-Create)
+1. **Provisioning (`POST /wallets`):** When an authenticated user requests their wallet, the system executes an `INSERT ... ON CONFLICT (user_id) DO UPDATE` (an upsert) in PostgreSQL.
+2. **Seed Balance:** If the wallet doesn't exist, it is created with a default "seed" balance of 1,000,000 paise (₹10,000) to allow immediate testing of the transfer mechanics. The database enforces a `UNIQUE(user_id)` constraint to ensure no user can accidentally provision multiple wallets.
+
+### Flow 3: The P2P Transfer Algorithm (The Critical Path)
+This is the most complex flow in the system (`POST /transfers`). 
+1. **Validation & Idempotency Check:** The request (containing `from`, `to`, `amount`, and an `Idempotency-Key` header) is validated. The system queries the `idempotency_keys` table. If the key exists and the payload hash matches, the system short-circuits and returns the cached HTTP response.
+2. **Transaction & Deterministic Locking:** A database `BEGIN` transaction is opened. The system sorts the `from_wallet_id` and `to_wallet_id` in ascending UUID order. It then executes a `SELECT ... FOR UPDATE` to lock both rows in that exact order, completely preventing deadlocks.
+3. **Balance Guards:** The application checks if `sender.balance >= amount`. If not, it declines the transfer.
+4. **Atomic Mutations:** 
+   - The sender is debited (`UPDATE wallets SET balance = balance - amount WHERE id = X AND balance >= amount`).
+   - The receiver is credited.
+   - A new record is inserted into the `transfers` ledger.
+   - The response is cached in the `idempotency_keys` table.
+5. **Commit:** The database `COMMIT` executes, persisting all changes atomically and releasing the row locks.
