@@ -34,6 +34,14 @@ Floating-point numbers can introduce precision errors during arithmetic operatio
 - **Deadlock Prevention:** If Tx1 locks Wallet A then Wallet B, and Tx2 concurrently locks Wallet B then Wallet A, a deadlock occurs. To prevent this, the application must **sort the lock acquisition order deterministically**. For instance, always lock the wallet with the smaller UUID string first (`MIN(A, B)` then `MAX(A, B)`). This ensures all concurrent transactions traverse the locks in the exact same global order, making circular dependencies (and thus deadlocks) mathematically impossible.
 
 **Follow-up Question:** 
+*What if User A tries to send money to User B and User C at the exact same time, and doesn't have enough balance for both? Can they double-spend?*
+**Follow-up Answer:** 
+No. In Transaction 1 (A → B), the system locks Wallet A and Wallet B in deterministic order. In Transaction 2 (A → C), the system locks Wallet A and Wallet C in deterministic order. 
+
+Because both transactions require a lock on Wallet A, they will contend for it. Whichever transaction acquires the lock on Wallet A first will force the other transaction to queue and wait. 
+Once the first transaction completes, it releases the lock. The second transaction then wakes up, acquires the lock on Wallet A, and re-evaluates the `sender.balance >= amount` condition against the *new* balance. Because the balance was reduced by the first transaction, the second transaction safely declines, preventing the double-spend.
+
+**Follow-up Question:** 
 *What happens to latency in this design if thousands of people are sending money to a single "hot wallet" (e.g., a popular merchant)?*
 **Follow-up Answer:** 
 Because of row-level locking, transfers to a hot wallet will be strictly serialized, leading to lock contention, queuing in the database, and increased API latency. 
