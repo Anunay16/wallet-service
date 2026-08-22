@@ -150,7 +150,15 @@ To scale beyond a single database node, we would implement the following progres
   - *Resolution:* The application must fall back to querying the primary/replica database directly (Cache-Aside pattern). To prevent a "Cache Stampede" (where thousands of requests hit the DB simultaneously), we must implement request coalescing or singleflight mechanisms in the Go app.
 
 - **Scenario 5: Message Broker Fails (If using Kafka for Async Ledger)**
-  - *Resolution:* If Kafka is down, the system cannot publish the "Credit" event after deducting the sender. To fix this, we implement the **Transactional Outbox Pattern**. We write the event to an `outbox` table in PostgreSQL in the *same ACID transaction* as the sender's debit. A separate background worker (or CDC system) continuously polls the outbox table and guarantees at-least-once delivery to Kafka when it recovers.
+  - *Resolution:* If Kafka is down, the system cannot publish the "Credit" event after deducting the sender. To fix this, we implement the **Transactional Outbox Pattern**. We write the event to an `outbox` table in PostgreSQL in the *same ACID transaction* as the sender's debit. A separate background worker (or CDC system) continuously polling the outbox table and guarantees at-least-once delivery to Kafka when it recovers.
+
+- **Scenario 6: Concurrent Idempotency Race Condition (Current Implementation)**
+  - *The Scenario:* A client's network hangs, so they retry the transfer. Both requests hit the backend at the exact same millisecond. Because neither transaction has committed yet, both `SELECT` checks for the idempotency key return "not found", and both attempt to execute the transfer.
+  - *Resolution:* Our PostgreSQL database enforces a Unique Constraint on `(idempotency_key, user_id)`. The first transaction commits successfully. The second transaction will trigger a **PG Duplicate Key Error (SQLSTATE 23505)** upon insertion. The Go application catches this specific error, rolls back its redundant transaction, and retrieves the newly cached response from the first transaction to return to the user.
+
+- **Scenario 7: Traffic Spike & Connection Exhaustion (Current Implementation)**
+  - *The Scenario:* A massive spike in traffic causes hundreds of concurrent transfer requests. However, the database is configured with `max_open_conns: 25` to protect its memory.
+  - *Resolution:* The Go `pgxpool` driver queues the requests in the application layer. If a request waits in the queue longer than the configured timeout, the application drops the request and returns a `503 Service Unavailable`. This "load shedding" prevents the database from crashing under pressure, sacrificing availability for a subset of users to maintain overall system stability and correctness.
 
 ---
 
